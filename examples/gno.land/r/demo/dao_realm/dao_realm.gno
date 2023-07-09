@@ -17,7 +17,7 @@ import (
 var (
 	daoCore       dao_core.IDAOCore
 	registry      = dao_interfaces.NewMessagesRegistry()
-	mainBoardName = "foo_dao_3"
+	mainBoardName = "dao_realm"
 	groupID       groups.GroupID
 )
 
