@@ -100,7 +100,7 @@ func (fi *FlagsIndex) ClearFlagCount(flagID FlagID) {
 	fi.flagsCountsByID.Remove(string(flagID))
 
 	// remove from byCount, we need to recreate the slice since splicing is broken
-	newByCount := make([]*FlagCount, len(fi.flagsCounts)-1)
+	newByCount := []*FlagCount{}
 	for i := range fi.flagsCounts {
 		if fi.flagsCounts[i].FlagID == flagID {
 			continue
@@ -129,12 +129,22 @@ func (fi *FlagsIndex) Dump() string {
 
 	str += "## flagsCounts:\n"
 	for i := range fi.flagsCounts {
-		str += "- " + string(fi.flagsCounts[i].FlagID) + " " + strconv.FormatUint(fi.flagsCounts[i].Count, 10) + "\n"
+		str += "- "
+		if fi.flagsCounts[i] == nil {
+			str += "nil (" + strconv.Itoa(i) + ")\n"
+			continue
+		}
+		str += string(fi.flagsCounts[i].FlagID) + " " + strconv.FormatUint(fi.flagsCounts[i].Count, 10) + "\n"
 	}
 
 	str += "\n## flagsCountsByID:\n"
 	fi.flagsCountsByID.Iterate("", "", func(key string, value interface{}) bool {
-		str += "- " + key + ": " + string(value.(*FlagCount).FlagID) + " " + strconv.FormatUint(value.(*FlagCount).Count, 10) + "\n"
+		str += "- "
+		if value == nil {
+			str += "nil (" + key + ")\n"
+			return false
+		}
+		str += key + ": " + string(value.(*FlagCount).FlagID) + " " + strconv.FormatUint(value.(*FlagCount).Count, 10) + "\n"
 		return false
 	})
 
