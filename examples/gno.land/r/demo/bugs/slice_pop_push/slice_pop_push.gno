@@ -1,19 +1,21 @@
 package slice_pop_push
 
+import (
+	"strings"
+)
+
 var slice = []string{"undead-element"}
 
-func Pop() {
+func Pop() []string {
 	slice = slice[:len(slice)-1]
+	return slice
 }
 
-func Push() {
+func Push() []string {
 	slice = append(slice, "new-element")
+	return slice
 }
 
 func Render(path string) string {
-	os := []string{"undead-element-2"}
-	os = os[:len(os)-1]
-	os = append(os, "new-element-2")
-
-	return os[0] + slice[0]
+	return strings.Join(slice, ",")
 }
