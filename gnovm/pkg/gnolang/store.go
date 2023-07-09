@@ -296,6 +296,9 @@ func (ds *defaultStore) loadObjectSafe(oid ObjectID) Object {
 // package values.
 func (ds *defaultStore) SetObject(oo Object) {
 	oid := oo.GetObjectID()
+	if array, ok := oo.(Value).(*ArrayValue); ok && strings.Contains(array.String(), "-element") {
+		fmt.Println("SetObject intersting array", array)
+	}
 	// replace children/fields with Ref.
 	o2 := copyValueWithRefs(nil, oo)
 	// marshal to binary.
