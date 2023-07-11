@@ -12,6 +12,7 @@ import (
 	"gno.land/p/demo/daodao/voting_group"
 	"gno.land/r/demo/groups"
 	modboards "gno.land/r/demo/modboards"
+	tori "gno.land/r/demo/tori"
 )
 
 var (
@@ -49,6 +50,10 @@ func init() {
 	registry.Register(modboards.NewCreateBoardHandler())
 	registry.Register(modboards.NewDeletePostHandler())
 	modboards.CreateBoard(mainBoardName)
+
+	// TODO: replace with grc20_admin_registry
+	registry.Register(tori.NewMintToriHandler())
+	registry.Register(tori.NewBurnToriHandler())
 }
 
 func Render(path string) string {
