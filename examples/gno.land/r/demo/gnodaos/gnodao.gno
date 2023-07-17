@@ -1,6 +1,7 @@
 package gnodao
 
 import (
+	fmt "gno.land/p/demo/ufmt"
 	"gno.land/p/demo/avl"
 	"std"
 	"strconv"
@@ -395,6 +396,181 @@ func GetProposals(daoId, startAfter, limit uint64) []Proposal {
 		max = startAfter + limit
 	}
 	return proposals[daoId][startAfter:max]
+}
+
+func RenderVote(daoId, proposalId uint64, address std.Address) string {
+	vote, found := getVote(daoId, proposalId, address)
+	if !found {
+		return ""
+	}
+
+	return fmt.Sprintf(`{
+	"address": "%s",
+	"timestamp": %d,
+	"option": %d
+}`, vote.address.String(), vote.timestamp, vote.option)
+}
+
+type DAOEncode struct {
+	id               uint64
+	uri              string // DAO homepage link
+	metadata         string // DAO metadata reference link
+	funds            uint64 // DAO managing funds
+	totalVotingPower uint64
+	votingPeriod     uint64
+	voteQuorum       uint64
+	threshold        uint64
+	vetoThreshold    uint64
+}
+
+type ProposalEncode struct {
+	daoId        uint64
+	id           uint64
+	title        string
+	summary      string
+	spendAmount  uint64
+	spender      std.Address
+	vpUpdates    []VotingPower
+	newMetadata  string
+	newURI       string
+	submitTime   uint64
+	voteEndTime  uint64
+	status       ProposalStatus
+	votingPowers []uint64
+}
+
+func GetDAOEncodeObject(dao DAO) DAOEncode {
+	return DAOEncode{
+		id:               dao.id,
+		uri:              dao.uri,
+		metadata:         dao.metadata,
+		funds:            dao.funds,
+		totalVotingPower: dao.totalVotingPower,
+		votingPeriod:     dao.votingPeriod,
+		voteQuorum:       dao.voteQuorum,
+		threshold:        dao.threshold,
+		vetoThreshold:    dao.vetoThreshold,
+	}
+}
+
+func GetProposalEncodeObject(p Proposal) ProposalEncode {
+	return ProposalEncode{
+		daoId:        p.daoId,
+		id:           p.id,
+		title:        p.title,
+		summary:      p.summary,
+		spendAmount:  p.spendAmount,
+		spender:      p.spender,
+		vpUpdates:    p.vpUpdates,
+		newMetadata:  p.newMetadata,
+		newURI:       p.newURI,
+		submitTime:   p.submitTime,
+		voteEndTime:  p.voteEndTime,
+		status:       p.status,
+		votingPowers: p.votingPowers,
+	}
+}
+
+func RenderDAO(daoId uint64) string {
+	daoEncode := GetDAOEncodeObject(GetDAO(daoId))
+
+	return fmt.Sprintf(`{
+	"id": %d,
+	"uri": "%s",
+	"metadata": "%s",
+	"funds" %d,
+	"totalVotingPower" %d,
+	"votingPeriod" %d,
+	"voteQuorum" %d,
+	"threshold" %d,
+	"vetoThreshold" %d
+}`, daoEncode.id, daoEncode.uri, daoEncode.metadata, daoEncode.funds, daoEncode.totalVotingPower, daoEncode.votingPeriod, daoEncode.voteQuorum, daoEncode.threshold, daoEncode.vetoThreshold)
+}
+
+func RenderDAOMembers(daoId uint64, start string, end string) string {
+	dao := GetDAO(daoId)
+	votingPowers := []VotingPower{}
+	dao.votingPowers.Iterate(start, end, func(tree *avl.Tree) bool {
+		power := tree.Value().(uint64)
+		votingPowers = append(votingPowers, VotingPower{
+			address: tree.Key(),
+			power:   power,
+		})
+		return false
+	})
+
+	rendered := "["
+	for index, votingPower := range votingPowers {
+		rendered += fmt.Sprintf(`{
+	"address": "%s",
+	"power": %d
+}`, votingPower.address, votingPower.power)
+		if index != len(votingPowers)-1 {
+			rendered += ",\n"
+		}
+	}
+	rendered += "]"
+	return rendered
+}
+
+func RenderDAOs(startAfter, limit uint64) string {
+	daos := GetDAOs(startAfter, limit)
+	daoEncodes := []DAOEncode{}
+	rendered := "["
+	for index, dao := range daos {
+		rendered += RenderDAO(dao.id)
+		if index != len(daos)-1 {
+			rendered += ",\n"
+		}
+	}
+	rendered += "]"
+	return rendered
+}
+
+func RenderProposal(daoId, proposalId uint64) string {
+	p := GetProposalEncodeObject(GetProposal(daoId, proposalId))
+	vpUpdatesRendered := "["
+	for index, vpUpdate := range p.vpUpdates {
+		vpUpdatesRendered += fmt.Sprintf(`{
+	"address": "%s",
+	"power": %d
+}`, vpUpdate.address, vpUpdate.power)
+		if index != len(p.vpUpdates)-1 {
+			vpUpdatesRendered += ",\n"
+		}
+	}
+	vpUpdatesRendered += "]"
+
+	votingPowersBySumRendered := fmt.Sprintf(`[%d, %d, %d, %d]`, p.votingPowers[0], p.votingPowers[1], p.votingPowers[2], p.votingPowers[3])
+
+	return fmt.Sprintf(`{
+	"daoId": %d,
+	"id": %d,
+	"title": "%s",
+	"summary": "%s",
+	"spendAmount": %d,
+	"spender": "%s",
+	"newMetadata": "%s",
+	"newURI": "%s",
+	"submitTime": %d,
+	"voteEndTime": %d,
+	"status": %d,
+	"vpUpdates": %s,
+	"votingPowers": %s
+}`, p.daoId, p.id, p.title, p.summary, p.spendAmount, p.spender.String(), p.newMetadata, p.newURI, p.submitTime, p.voteEndTime, p.status, vpUpdatesRendered, votingPowersBySumRendered)
+}
+
+func RenderProposals(daoId, startAfter, limit uint64) string {
+	proposals := GetProposals(daoId, startAfter, limit)
+	rendered := "["
+	for index, proposal := range proposals {
+		rendered += RenderProposal(proposal.daoId, proposal.id)
+		if index != len(proposals)-1 {
+			rendered += ",\n"
+		}
+	}
+	rendered += "]"
+	return rendered
 }
 
 func Render(path string) string {

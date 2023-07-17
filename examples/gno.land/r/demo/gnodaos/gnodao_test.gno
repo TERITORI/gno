@@ -419,6 +419,11 @@ func TestGetProposals(t *testing.T) {
 	if len(gotProposals) != 1 {
 		t.Errorf("invalid number of proposals")
 	}
+
+	renderedProposals = RenderProposals(0, 0, 1)
+	if renderedProposals != "" {
+		t.Errorf("invalid proposal rendering")
+	}
 }
 
 func TestRender(t *testing.T) {
