@@ -93,3 +93,41 @@ func GetBinaryMembers() string {
 	}
 	return strings.Join(ss, ",")
 }
+
+func RegisterNewFeature(handle NewHandle) {
+	assertRealmIsInDAOPrefix() // if strings.HasPrefix(std.PrevRealm().PkgPath(), "dao_realm/")
+	assertIsWhitelistedCaller()
+	registry.Register(handle)
+}
+
+var whitelisted []std.Address // can be done with https://github.com/gnolang/gno/pull/880
+
+func ToggleWhitelistedAddress(addr std.Address) {
+	assertIsAdminOrDAOApproved()
+	whitelisted = append(whitelisted, addr)
+}
+
+
+
+
+--------------
+import "dao_realm"
+
+func init() {
+	dao_realm.Register(handle) // works IF caller checks if std.PrevRealm().PkgPath() starts with the namespace
+}
+
+var registered bool
+
+func RegisterSelf() { // this one works whenever someone calls it, except, you need to manually whitelist the contract address first
+	if registered { return }
+	dao_realm.Register(handle)
+}
+
+---
+
+
+1. upload dao_realm
+2. upload dao_feat2
+3. call dao_realm.ToggleWhitelistedAddress(dao_feat2)
+4. call dao_feat2.RegisterSelf()
