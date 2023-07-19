@@ -1,8 +1,9 @@
 package escrow
 
 import (
-	"gno.land/r/demo/foo20"
 	fmt "gno.land/p/demo/ufmt"
+	"gno.land/r/demo/foo20"
+	"gno.land/r/demo/users"
 	"std"
 	"strconv"
 	"strings"
@@ -24,13 +25,13 @@ const (
 )
 
 type Contract struct {
-	id            uint64
-	sender        string
-	receiver      string
-	escrowToken   string // grc20 token
-	escrowAmount  uint64
-	status        ContractStatus
-	expireAt      uint64
+	id             uint64
+	sender         string
+	receiver       string
+	escrowToken    string // grc20 token
+	escrowAmount   uint64
+	status         ContractStatus
+	expireAt       uint64
 	clientFeedback string
 	sellerFeedback string
 }
@@ -54,10 +55,10 @@ func UpdateConfig(daoAdmin string) {
 }
 
 func CreateContract(
-	receiver     string
-	escrowToken  string // grc20 token
-	escrowAmount uint64
-	duration     uint64
+	receiver string,
+	escrowToken string, // grc20 token
+	escrowAmount uint64,
+	duration uint64,
 ) {
 	caller := std.GetOrigCaller()
 	if duration == 0 {
@@ -72,20 +73,23 @@ func CreateContract(
 
 	contractId := uint64(len(contracts))
 	contracts = append(contracts, Contract{
-		id: contractId,
-		sender: caller.String(),
-		receiver: receiver,
-		escrowToken: escrowToken,
+		id:           contractId,
+		sender:       caller.String(),
+		receiver:     receiver,
+		escrowToken:  escrowToken,
 		escrowAmount: escrowAmount,
-		status: CREATED,
-		expireAt: time.Now().Unix() + duration,
+		status:       CREATED,
+		expireAt:     uint64(time.Now().Unix()) + duration,
 	})
-	foo20.TransferFrom(sender, config.daoAdmin, escrowAmount)
+	foo20.TransferFrom(
+		users.AddressOrName(caller.String()),
+		users.AddressOrName(config.daoAdmin),
+		escrowAmount)
 }
 
 func CancelContract(contractId uint64) {
 	caller := std.GetOrigCaller()
-	if contractId >= len(contracts) {
+	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
 
@@ -102,12 +106,14 @@ func CancelContract(contractId uint64) {
 
 	// return grc20 tokens back to sender
 	// TODO: resolve caller problem
-	foo20.Transfer(sender, contract.escrowAmount)
+	foo20.Transfer(
+		users.AddressOrName(contract.sender),
+		contract.escrowAmount)
 }
 
 func AcceptContract(contractId uint64) {
 	caller := std.GetOrigCaller()
-	if contractId >= len(contracts) {
+	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
 
@@ -116,7 +122,7 @@ func AcceptContract(contractId uint64) {
 		panic("contract can only be accepted at CREATED status")
 	}
 
-	if contract.expireAt < time.Now().Unix() {
+	if contract.expireAt < uint64(time.Now().Unix()) {
 		panic("contract already expired")
 	}
 
@@ -128,7 +134,7 @@ func AcceptContract(contractId uint64) {
 
 func PauseContract(contractId uint64) {
 	caller := std.GetOrigCaller()
-	if contractId >= len(contracts) {
+	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
 
@@ -145,7 +151,7 @@ func PauseContract(contractId uint64) {
 
 func CompleteContract(contractId uint64) {
 	caller := std.GetOrigCaller()
-	if contractId >= len(contracts) {
+	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
 
@@ -160,13 +166,15 @@ func CompleteContract(contractId uint64) {
 
 	// send tokens to receiver
 	// TODO: resolve caller problem
-	foo20.Transfer(receiver, contract.escrowAmount)
+	foo20.Transfer(
+		users.AddressOrName(contract.receiver),
+		contract.escrowAmount)
 	contracts[contractId].status = COMPLETED
 }
 
 func CompleteContractByDAO(contractId uint64, sellerAmount uint64) {
 	caller := std.GetOrigCaller()
-	if contractId >= len(contracts) {
+	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
 
@@ -184,13 +192,17 @@ func CompleteContractByDAO(contractId uint64, sellerAmount uint64) {
 
 	// send tokens for client and seller
 	// TODO: resolve caller problem
-	foo20.Transfer(contract.receiver, sellerAmount)
-	foo20.Transfer(contract.sender, clientAmount)
+	foo20.Transfer(
+		users.AddressOrName(contract.receiver),
+		sellerAmount)
+	foo20.Transfer(
+		users.AddressOrName(contract.sender),
+		clientAmount)
 }
 
 func GiveFeedback(contractId uint64, feedback string) {
 	caller := std.GetOrigCaller()
-	if contractId >= len(contracts) {
+	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
 
@@ -208,8 +220,7 @@ func GiveFeedback(contractId uint64, feedback string) {
 	}
 }
 
-
-func GetContracts(startAfter, limit uint64) []DAO {
+func GetContracts(startAfter, limit uint64) []Contract {
 	max := uint64(len(contracts))
 	if startAfter+limit < max {
 		max = startAfter + limit
@@ -223,9 +234,9 @@ func RenderConfig() string {
 }`, config.daoAdmin)
 }
 
-func RenderContract(contractId uint64) string {	
+func RenderContract(contractId uint64) string {
 	caller := std.GetOrigCaller()
-	if contractId >= len(contracts) {
+	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
 
@@ -244,8 +255,8 @@ func RenderContract(contractId uint64) string {
 func RenderContracts(startAfter uint64, limit uint64) string {
 	contracts := GetContracts(startAfter, limit)
 	rendered := "["
-	for index, proposal := range contracts {
-		rendered += RenderContract(proposal.daoId, proposal.id)
+	for index, contract := range contracts {
+		rendered += RenderContract(contract.id)
 		if index != len(contracts)-1 {
 			rendered += ",\n"
 		}
