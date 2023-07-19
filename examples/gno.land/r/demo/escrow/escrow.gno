@@ -1,6 +1,7 @@
 package escrow
 
 import (
+	"gno.land/r/demo/foo20"
 	fmt "gno.land/p/demo/ufmt"
 	"std"
 	"strconv"
@@ -79,6 +80,7 @@ func CreateContract(
 		status: CREATED,
 		expireAt: time.Now().Unix() + duration,
 	})
+	foo20.TransferFrom(sender, config.daoAdmin, escrowAmount)
 }
 
 func CancelContract(contractId uint64) {
@@ -98,7 +100,9 @@ func CancelContract(contractId uint64) {
 
 	contracts[contractId].status = CANCELED
 
-	// TODO: return grc20 tokens back to sender
+	// return grc20 tokens back to sender
+	// TODO: resolve caller problem
+	foo20.Transfer(sender, contract.escrowAmount)
 }
 
 func AcceptContract(contractId uint64) {
@@ -154,7 +158,10 @@ func CompleteContract(contractId uint64) {
 		panic("only contract sender can complete")
 	}
 
-	// TODO: send tokens to receiver
+	// send tokens to receiver
+	// TODO: resolve caller problem
+	foo20.Transfer(receiver, contract.escrowAmount)
+	contracts[contractId].status = COMPLETED
 }
 
 func CompleteContractByDAO(contractId uint64, sellerAmount uint64) {
@@ -175,7 +182,10 @@ func CompleteContractByDAO(contractId uint64, sellerAmount uint64) {
 	clientAmount := contract.escrowAmount - sellerAmount
 	contracts[contractId].status = COMPLETED
 
-	// TODO: send tokens for client and seller
+	// send tokens for client and seller
+	// TODO: resolve caller problem
+	foo20.Transfer(contract.receiver, sellerAmount)
+	foo20.Transfer(contract.sender, clientAmount)
 }
 
 func GiveFeedback(contractId uint64, feedback string) {
