@@ -5,7 +5,7 @@ import (
 
 	dao_interfaces "gno.land/p/demo/daodao/interfaces"
 	"gno.land/p/demo/markdown_utils"
-	"gno.land/r/demo/groups"
+	"gno.land/r/demo/groups_v4"
 )
 
 type GRC4Voting struct {
