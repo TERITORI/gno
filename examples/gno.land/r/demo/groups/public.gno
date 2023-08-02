@@ -29,7 +29,7 @@ func CreateGroup(name string) GroupID {
 	// std.AssertOriginCall()
 	caller := std.PrevRealm().Addr()
 	// usernameOf(caller)
-	url := "/r/demo/groups:" + name
+	url := "/r/demo/groups_v4:" + name
 	group := newGroup(url, name, caller)
 	gidkey := groupIDKey(group.id)
 	gGroups.Set(gidkey, group)
@@ -43,7 +43,7 @@ func AddMember(gid GroupID, address string, weight int, metadata string) MemberI
 	// usernameOf(caller)
 	group := getGroup(gid)
 	if !group.HasPermission(caller, EditPermission) {
-		panic("unauthorized to edit group")
+		panic(caller.String() + " aka " + std.PrevRealm().PkgPath() + " unauthorized to edit group, expected: " + group.creator.String())
 	}
 	/*
 		user := users.GetUserByAddress(std.Address(address))
