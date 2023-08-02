@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"gno.land/p/demo/binutils"
-	"gno.land/p/demo/daodao/interfaces"
+	"gno.land/p/demo/daodao/interfaces_v3"
 	"gno.land/r/demo/users"
 )
 

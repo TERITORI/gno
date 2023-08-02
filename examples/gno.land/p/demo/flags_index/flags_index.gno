@@ -3,7 +3,7 @@ package flags_index
 import (
 	"strconv"
 
-	"gno.land/p/demo/cpavl"
+	"gno.land/p/demo/avl"
 )
 
 type FlagID string

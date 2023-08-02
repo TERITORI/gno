@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
-	dao_core "gno.land/p/demo/daodao/core"
-	dao_interfaces "gno.land/p/demo/daodao/interfaces"
-	"gno.land/p/demo/daodao/proposal_single"
-	"gno.land/p/demo/daodao/voting_group"
-	"gno.land/r/demo/groups"
-	modboards "gno.land/r/demo/modboards"
-	tori "gno.land/r/demo/tori"
+	dao_core "gno.land/p/demo/daodao/core_v3"
+	dao_interfaces "gno.land/p/demo/daodao/interfaces_v3"
+	"gno.land/p/demo/daodao/proposal_single_v4"
+	"gno.land/p/demo/daodao/voting_group_v5"
+	"gno.land/p/demo/jsonutil_v2"
+	"gno.land/r/demo/groups_v6"
+	modboards "gno.land/r/demo/modboards_v3"
 )
 
 var (
@@ -50,10 +50,6 @@ func init() {
 	registry.Register(modboards.NewCreateBoardHandler())
 	registry.Register(modboards.NewDeletePostHandler())
 	modboards.CreateBoard(mainBoardName)
-
-	// TODO: replace with grc20_admin_registry
-	registry.Register(tori.NewMintToriHandler())
-	registry.Register(tori.NewBurnToriHandler())
 }
 
 func Render(path string) string {
@@ -83,6 +79,10 @@ func Propose(moduleIndex int, title string, description string, b64Messages stri
 		}
 	}
 	mod.Propose(title, description, messages)
+}
+
+func GetProposalsJSON(moduleIndex int) string {
+	return jsonutil.FormatSlice(dao_core.GetProposalModule(daoCore, moduleIndex).Proposals())
 }
 
 func GetBinaryMembers() string {
