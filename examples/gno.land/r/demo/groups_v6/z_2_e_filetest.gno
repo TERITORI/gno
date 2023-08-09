@@ -4,7 +4,7 @@ package groups_test
 // SEND: 200000000ugnot
 
 import (
-	"gno.land/r/demo/groups"
+	"gno.land/r/demo/groups_v6"
 	"gno.land/r/demo/users"
 )
 

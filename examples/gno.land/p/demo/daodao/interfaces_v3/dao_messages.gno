@@ -6,11 +6,13 @@ import (
 	"strings"
 
 	"gno.land/p/demo/avl"
+	"gno.land/p/demo/jsonutil_v3"
 )
 
 type MessageHandler interface {
 	Execute(message ExecutableMessage)
 	FromBinary(b []byte) ExecutableMessage
+	FromJSON(ast *jsonutil.JSONASTNode) ExecutableMessage
 	Type() string
 }
 
@@ -41,6 +43,31 @@ func (r *MessagesRegistry) FromBinary(b []byte) ExecutableMessage {
 		panic("invalid ExecutableMessage: invalid message type")
 	}
 	return h.(MessageHandler).FromBinary(b)
+}
+
+func (r *MessagesRegistry) FromJSON(s string) []ExecutableMessage {
+	ast := jsonutil.TokenizeAndParse(s)
+	if ast.Kind != jsonutil.JSONKindArray {
+		panic("msgs is not an array")
+	}
+	msgs := make([]ExecutableMessage, 0, len(ast.ArrayChildren))
+	for _, child := range ast.ArrayChildren {
+		if child.Kind != jsonutil.JSONKindObject {
+			panic("invalid ExecutableMessage: message container is not an object")
+		}
+		var messageType string
+		var payload *jsonutil.JSONASTNode
+		jsonutil.ParseObjectAST(child, []*jsonutil.ParseKV{
+			{Key: "type", Value: &messageType},
+			{Key: "payload", Value: &payload},
+		})
+		h, ok := r.handlers.Get(messageType)
+		if !ok {
+			panic("invalid ExecutableMessage: invalid message type")
+		}
+		msgs = append(msgs, h.(MessageHandler).FromJSON(payload))
+	}
+	return msgs
 }
 
 func (r *MessagesRegistry) FromBase64String(s string) ExecutableMessage {

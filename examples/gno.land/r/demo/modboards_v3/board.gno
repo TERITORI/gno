@@ -8,12 +8,17 @@ import (
 
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/flags_index"
+	"gno.land/p/demo/jsonutil_v3"
 )
 
 //----------------------------------------
 // Board
 
 type BoardID uint64
+
+func (bid *BoardID) FromJSON(ast *jsonutil.JSONASTNode) {
+	*bid = BoardID(jsonutil.ParseUint64(ast.Value))
+}
 
 func (bid BoardID) String() string {
 	return strconv.Itoa(int(bid))

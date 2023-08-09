@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"gno.land/p/demo/daodao/interfaces_v3"
+	"gno.land/p/demo/jsonutil_v3"
 )
 
 // Create board
@@ -103,7 +104,7 @@ type ExecutableMessageDeletePost struct {
 }
 
 func (msg *ExecutableMessageDeletePost) Type() string {
-	return "DeletePost"
+	return "gno.land/r/demo/modboards.DeletePost"
 }
 
 func (msg *ExecutableMessageDeletePost) String() string {
@@ -225,4 +226,15 @@ func (h *DeletePostHandler) Type() string {
 
 func (h *DeletePostHandler) FromBinary(b []byte) dao_interfaces.ExecutableMessage {
 	return ExecutableMessageDeletePostFromBinary(b)
+}
+
+func (h *DeletePostHandler) FromJSON(ast *jsonutil.JSONASTNode) dao_interfaces.ExecutableMessage {
+	msg := &ExecutableMessageDeletePost{}
+	jsonutil.ParseObjectAST(ast, []*jsonutil.ParseKV{
+		{Key: "boardId", Value: &msg.BoardID},
+		{Key: "threadId", Value: &msg.ThreadID},
+		{Key: "postId", Value: &msg.PostID},
+		{Key: "reason", Value: &msg.Reason},
+	})
+	return msg
 }

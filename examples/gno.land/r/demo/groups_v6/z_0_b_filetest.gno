@@ -2,7 +2,7 @@
 package groups_test
 
 import (
-	"gno.land/r/demo/groups"
+	"gno.land/r/demo/groups_v6"
 	"gno.land/r/demo/users"
 )
 
