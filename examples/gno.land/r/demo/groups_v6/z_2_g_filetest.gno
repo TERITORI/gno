@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"gno.land/p/demo/testutils"
-	"gno.land/r/demo/groups"
+	"gno.land/r/demo/groups_v6"
 	"gno.land/r/demo/users"
 )
 

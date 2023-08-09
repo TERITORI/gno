@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"gno.land/p/demo/avl"
-	"gno.land/p/demo/jsonutil_v2"
+	"gno.land/p/demo/jsonutil_v3"
 )
 
 type NoopMessage struct{}

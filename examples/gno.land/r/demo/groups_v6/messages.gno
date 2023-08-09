@@ -8,6 +8,7 @@ import (
 
 	"gno.land/p/demo/binutils"
 	"gno.land/p/demo/daodao/interfaces_v3"
+	"gno.land/p/demo/jsonutil_v3"
 )
 
 type ExecutableMessageAddMember struct {
@@ -20,7 +21,7 @@ type ExecutableMessageAddMember struct {
 }
 
 func (msg *ExecutableMessageAddMember) Type() string {
-	return "AddMember"
+	return "gno.land/r/demo/groups.AddMember"
 }
 
 func (msg *ExecutableMessageAddMember) String() string {
@@ -78,6 +79,17 @@ func (h *AddMemberHandler) FromBinary(b []byte) dao_interfaces.ExecutableMessage
 	return ExecutableMessageAddMemberFromBinary(b)
 }
 
+func (h *AddMemberHandler) FromJSON(ast *jsonutil.JSONASTNode) dao_interfaces.ExecutableMessage {
+	msg := &ExecutableMessageAddMember{}
+	jsonutil.ParseObjectAST(ast, []*jsonutil.ParseKV{
+		{Key: "groupId", Value: &msg.GroupID},
+		{Key: "address", Value: &msg.Address},
+		{Key: "weight", Value: &msg.Weight},
+		{Key: "metadata", Value: &msg.Metadata},
+	})
+	return msg
+}
+
 type ExecutableMessageDeleteMember struct {
 	dao_interfaces.ExecutableMessage
 
@@ -86,7 +98,7 @@ type ExecutableMessageDeleteMember struct {
 }
 
 func (msg *ExecutableMessageDeleteMember) Type() string {
-	return "DeleteMember"
+	return "gno.land/r/demo/groups.DeleteMember"
 }
 
 func (msg *ExecutableMessageDeleteMember) String() string {
@@ -135,4 +147,13 @@ func (h *DeleteMemberHandler) Type() string {
 
 func (h *DeleteMemberHandler) FromBinary(b []byte) dao_interfaces.ExecutableMessage {
 	return ExecutableMessageDeleteMemberFromBinary(b)
+}
+
+func (h *DeleteMemberHandler) FromJSON(ast *jsonutil.JSONASTNode) dao_interfaces.ExecutableMessage {
+	msg := &ExecutableMessageDeleteMember{}
+	jsonutil.ParseObjectAST(ast, []*jsonutil.ParseKV{
+		{Key: "groupId", Value: &msg.GroupID},
+		{Key: "memberId", Value: &msg.MemberID},
+	})
+	return msg
 }

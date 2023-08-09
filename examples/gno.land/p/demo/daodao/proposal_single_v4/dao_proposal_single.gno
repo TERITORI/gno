@@ -8,7 +8,7 @@ import (
 	"gno.land/p/demo/avl"
 	dao_core "gno.land/p/demo/daodao/core_v3"
 	dao_interfaces "gno.land/p/demo/daodao/interfaces_v3"
-	"gno.land/p/demo/jsonutil_v2"
+	"gno.land/p/demo/jsonutil_v3"
 )
 
 type DAOProposalSingleOpts struct {
@@ -209,7 +209,7 @@ func (d *daoProposalSingle) GetBallot(proposalID int, memberAddress std.Address)
 }
 
 func (d *daoProposalSingle) Vote(proposalID int, vote dao_interfaces.Vote, rationale string) {
-	voter := std.GetOrigCaller()
+	voter := std.PrevRealm().Addr()
 
 	if len(d.proposals) <= proposalID || proposalID < 0 {
 		panic("proposal does not exist")

@@ -25,6 +25,9 @@ var (
 	byPkgPath   = avl.NewTree()
 )
 
+// TODO: use profile for info
+// TODO: make core accessible
+
 func Register(name string, description string, imageURI string) {
 	realm := std.PrevRealm()
 	pkgPath := realm.PkgPath()

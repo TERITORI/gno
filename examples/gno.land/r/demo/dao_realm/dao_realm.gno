@@ -10,7 +10,7 @@ import (
 	dao_interfaces "gno.land/p/demo/daodao/interfaces_v3"
 	"gno.land/p/demo/daodao/proposal_single_v4"
 	"gno.land/p/demo/daodao/voting_group_v5"
-	"gno.land/p/demo/jsonutil_v2"
+	"gno.land/p/demo/jsonutil_v3"
 	"gno.land/r/demo/groups_v6"
 	modboards "gno.land/r/demo/modboards_v3"
 )
@@ -28,6 +28,7 @@ func init() {
 	groups.AddMember(groupID, "g108cszmcvs4r3k67k7h5zuhm4el3qhlrxzhshtv", 1, "")
 	groups.AddMember(groupID, "g14u5eaheavy0ux4dmpykg2gvxpvqvexm9cyg58a", 1, "")
 	groups.AddMember(groupID, "g1ckn395mpttp0vupgtratyufdaakgh8jgkmr3ym", 1, "")
+	groups.AddMember(groupID, std.GetOrigCaller().String(), 1, "")
 	registry.Register(groups.NewAddMemberHandler())
 	registry.Register(groups.NewDeleteMemberHandler())
 
@@ -81,6 +82,12 @@ func Propose(moduleIndex int, title string, description string, b64Messages stri
 	mod.Propose(title, description, messages)
 }
 
+func ProposeJSON(moduleIndex int, title string, description string, messagesJSON string) {
+	mod := dao_core.GetProposalModule(daoCore, moduleIndex)
+	messages := registry.FromJSON(messagesJSON)
+	mod.Propose(title, description, messages)
+}
+
 func GetProposalsJSON(moduleIndex int) string {
 	return jsonutil.FormatSlice(dao_core.GetProposalModule(daoCore, moduleIndex).Proposals())
 }
@@ -92,4 +99,9 @@ func GetBinaryMembers() string {
 		ss = append(ss, base64.RawURLEncoding.EncodeToString(member.Bytes()))
 	}
 	return strings.Join(ss, ",")
+}
+
+func GetMembersJSON() string {
+	members := groups.GetMembers(groupID)
+	return jsonutil.FormatSlice(members)
 }
