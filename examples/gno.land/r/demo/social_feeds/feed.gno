@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gno.land/p/demo/avl"
+	"gno.land/p/demo/flags_index"
 )
 
 type FeedID uint64
@@ -23,6 +24,7 @@ type Feed struct {
 	posts     avl.Tree // Post.id -> *Post
 	createdAt time.Time
 	deleted   avl.Tree
+	flags     *flags_index.FlagsIndex
 
 	postsCtr uint64
 }
@@ -45,6 +47,7 @@ func newFeed(fid FeedID, url string, name string, creator std.Address) *Feed {
 		posts:     avl.Tree{},
 		createdAt: time.Now(),
 		deleted:   avl.Tree{},
+		flags:     flags_index.NewFlagsIndex(),
 
 		postsCtr: 0,
 	}
@@ -97,7 +100,7 @@ func (feed *Feed) Render() string {
 			}
 
 			post := value.(*Post)
-			postUrl := "/r/demo/social_feeds_v4:" + feed.name + "/" + post.id.String()
+			postUrl := "/r/demo/social_feeds_v5:" + feed.name + "/" + post.id.String()
 
 			str += " * [PostID: " + post.id.String() +
 				" - " + intToString(post.reactions.Size()) + " reactions " +

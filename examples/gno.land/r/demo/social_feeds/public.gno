@@ -15,7 +15,7 @@ import (
 func CreateFeed(name string) FeedID {
 	fid := incGetFeedID()
 	caller := std.PrevRealm().Addr()
-	url := "/r/demo/social_feeds_v4:" + name
+	url := "/r/demo/social_feeds_v5:" + name
 	feed := newFeed(fid, url, name, caller)
 	fidkey := feedIDKey(fid)
 	gFeeds.Set(fidkey, feed)
@@ -51,11 +51,13 @@ func DeletePost(fid FeedID, pid PostID) {
 	feed := mustGetFeed(fid)
 	post := feed.MustGetPost(pid)
 
-	if caller != post.creator {
+	if caller != post.creator || caller != feed.creator {
 		panic("you are not creator of this post")
 	}
 
 	post.Delete()
+
+	feed.flags.ClearFlagCount(getFlagID(pid))
 }
 
 // Any one can react post
@@ -144,4 +146,15 @@ func GetPost(fid FeedID, pid PostID) string {
 
 	post := data.(*Post)
 	return post.String()
+}
+
+// Maybe we should require a deposit that is returned if the post is deleted
+func FlagPost(fid feedID, postID PostID) {
+	caller := std.PrevRealm().Addr()
+
+	feed := mustGetFeed(fid)
+	_ = feed.MustGetPost(postID)
+
+	// flag
+	feed.flags.Flag(getFlagID(postID), caller.String())
 }
