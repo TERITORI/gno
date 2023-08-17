@@ -22,11 +22,12 @@ type Feed struct {
 	name      string
 	creator   std.Address
 	owner     std.Address
-	posts     avl.Tree // Post.id -> *Post
+	posts     avl.Tree // pidkey -> *Post
 	createdAt time.Time
 	deleted   avl.Tree
 
-	flags *flags_index.FlagsIndex
+	flags             *flags_index.FlagsIndex
+	hiddenPostsByUser avl.Tree // std.Address => *avl.Tree (postID => bool)
 
 	postsCtr uint64
 }
@@ -96,6 +97,39 @@ func (feed *Feed) FlagPost(flagBy std.Address, pid PostID) {
 	feed.flags.Flag(flagID, flagBy.String())
 }
 
+func (feed *Feed) HidePostForUser(caller std.Address, pid PostID) {
+	userAddr := caller.String()
+
+	value, exists := feed.hiddenPostsByUser.Get(userAddr)
+	var hiddenPosts *avl.Tree
+	if exists {
+		hiddenPosts = value.(*avl.Tree)
+	} else {
+		hiddenPosts = avl.NewTree()
+		feed.hiddenPostsByUser.Set(userAddr, hiddenPosts)
+	}
+
+	if hiddenPosts.Has(pid.String()) {
+		panic("PostID is already hidden: " + pid.String())
+	}
+
+	hiddenPosts.Set(pid.String(), true)
+}
+
+func (feed *Feed) UnHidePostForUser(userAddress std.Address, pid PostID) {
+	value, exists := feed.hiddenPostsByUser.Get(userAddress.String())
+	var hiddenPosts *avl.Tree
+	if exists {
+		hiddenPosts = value.(*avl.Tree)
+		_, removed := hiddenPosts.Remove(pid.String())
+		if !removed {
+			panic("Post is not hidden: " + pid.String())
+		}
+	} else {
+		panic("User has not hidden post: " + pid.String())
+	}
+}
+
 func (feed *Feed) Render() string {
 	str := ""
 	str += "There are " + intToString(feed.posts.Size()) + " post(s) \n\n"
@@ -107,7 +141,7 @@ func (feed *Feed) Render() string {
 			}
 
 			post := value.(*Post)
-			postUrl := "/r/demo/social_feeds_v4:" + feed.name + "/" + post.id.String()
+			postUrl := "/r/demo/social_feeds:" + feed.name + "/" + post.id.String()
 
 			str += " * [" +
 				"PostID: " + post.id.String() +
@@ -120,6 +154,24 @@ func (feed *Feed) Render() string {
 			return false
 		})
 	}
+
+	str += "---------------------------------------\n"
+	if feed.hiddenPostsByUser.Size() > 0 {
+		str += "Hidden posts by users:\n\n"
+
+		feed.hiddenPostsByUser.Iterate("", "", func(userAddr string, value interface{}) bool {
+			hiddenPosts := value.(*avl.Tree)
+			str += "\nUser address: " + userAddr + "\n"
+
+			hiddenPosts.Iterate("", "", func(pid string, value interface{}) bool {
+				str += "- PostID: " + pid + "\n"
+				return false
+			})
+
+			return false
+		})
+	}
+
 	return str
 }
 

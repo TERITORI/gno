@@ -21,6 +21,21 @@ gnokey maketx call \
     -args '{"gifs": [], "files": [], "title": "", "message": "Hello world 2 !", "hashtags": [], "mentions": [], "createdAt": "2023-08-03T01:39:45.522Z", "updatedAt": "2023-08-03T01:39:45.522Z"}' \
     test1 
 
+gnokey maketx call \
+    -pkgpath "gno.land/r/demo/social_feeds" \
+    -func "HidePostForMe" \
+    -gas-fee 1000000ugnot \
+    -gas-wanted 3000000 \
+    -send "" \
+    -broadcast \
+    -args "1" \
+    -args "1" \
+    test1
+
+// Query posts
+gnokey query vm/qeval --data 'gno.land/r/demo/social_feeds
+GetPosts(1, "", []uint64{}, 0, 10)'
+
 gnokey maketx addpkg \
     -deposit="1ugnot" \
     -gas-fee="1ugnot" \

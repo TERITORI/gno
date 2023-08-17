@@ -4,7 +4,6 @@ package social_feeds
 
 import (
 	"encoding/base64"
-	"fmt"
 	"std"
 	"strconv"
 	"strings"
@@ -24,6 +23,7 @@ var (
 	cat1       = uint64(1)
 	cat2       = uint64(2)
 	user       = testutils.TestAddress("user")
+	filter_all = []uint64{}
 )
 
 func getFeed1() *Feed {
@@ -164,7 +164,6 @@ func testFilterByCategories(t *testing.T) {
 	filter_cat1_2 := []uint64{1, 2}
 	filter_cat9 := []uint64{9}
 	filter_cat1_2_9 := []uint64{1, 2, 9}
-	filter_all := []uint64{}
 
 	feedID2 := CreateFeed("teritori2")
 	feed2 := mustGetFeed(feedID2)
@@ -383,6 +382,44 @@ func testMigrate(t *testing.T) {
 	}
 }
 
+func testHidePostForMe(t *testing.T) {
+	user := std.Address("user")
+	std.TestSetOrigCaller(user)
+
+	feedID8 := CreateFeed("teritor8")
+	feed8 := mustGetFeed(feedID8)
+
+	postIDToHide := CreatePost(feed8.id, rootPostID, cat1, "metadata1")
+	postID := CreatePost(feed8.id, rootPostID, cat1, "metadata1")
+
+	if count := countPosts(feed8.id, filter_all, 10); count != 2 {
+		t.Fatalf("expected posts count: 2, got %q.", count)
+	}
+
+	// Hide a post for me
+	HidePostForMe(feed8.id, postIDToHide)
+
+	if count := countPosts(feed8.id, filter_all, 10); count != 1 {
+		t.Fatalf("expected posts count after hidding: 1, got %q.", count)
+	}
+
+	// Query from another user should return full list
+	another := std.Address("another")
+	std.TestSetOrigCaller(another)
+
+	if count := countPosts(feed8.id, filter_all, 10); count != 2 {
+		t.Fatalf("expected posts count from another: 2, got %q.", count)
+	}
+
+	// UnHide a post for me
+	std.TestSetOrigCaller(user)
+	UnHidePostForMe(feed8.id, postIDToHide)
+
+	if count := countPosts(feed8.id, filter_all, 10); count != 2 {
+		t.Fatalf("expected posts count after unhidding: 2, got %q.", count)
+	}
+}
+
 func Test(t *testing.T) {
 	// Setup ================================================================
 	// NOTE: Dont know why std.GetOrigCaller in users.Register is always = std.GetCallerAt(1) here
@@ -408,4 +445,6 @@ func Test(t *testing.T) {
 	testFilterUser(t)
 
 	testMigrate(t)
+
+	testHidePostForMe(t)
 }

@@ -78,8 +78,13 @@ func TipPost(fid FeedID, pid PostID, amount int64) {
 
 // Get Posts list
 func GetPosts(fid FeedID, user string, categories []uint64, offset uint64, limit uint8) string {
-	caller := std.PrevRealm().Addr()
+	// caller := std.PrevRealm().Addr()
+	// NOTE: dont know why we cannot get caller by std.PrevRealm().Addr()
+	// and seems that this line works
+	caller := std.GetCallerAt(2)
 	feed := mustGetFeed(fid)
+
+	panic(caller.String())
 
 	var postList []string
 	var skipped uint64
@@ -104,6 +109,16 @@ func GetPosts(fid FeedID, user string, categories []uint64, offset uint64, limit
 
 			if user != "" && std.Address(user) != post.creator {
 				return false
+			}
+
+			// Check if post is in hidden list
+			value, exists := feed.hiddenPostsByUser.Get(caller.String())
+			if exists {
+				hiddenPosts := value.(*avl.Tree)
+				// If post.id exists in hiddenPosts tree => that post is hidden
+				if hiddenPosts.Has(post.id.String()) {
+					return false
+				}
 			}
 
 			if skipped < offset {
@@ -168,6 +183,20 @@ func FlagPost(fid FeedID, pid PostID) {
 	feed := mustGetFeed(fid)
 
 	feed.FlagPost(caller, pid)
+}
+
+func HidePostForMe(fid FeedID, pid PostID) {
+	caller := std.PrevRealm().Addr()
+	feed := mustGetFeed(fid)
+
+	feed.HidePostForUser(caller, pid)
+}
+
+func UnHidePostForMe(fid FeedID, pid PostID) {
+	caller := std.PrevRealm().Addr()
+	feed := mustGetFeed(fid)
+
+	feed.UnHidePostForUser(caller, pid)
 }
 
 func GetFlags(fid FeedID, limit uint64, offset uint64) string {

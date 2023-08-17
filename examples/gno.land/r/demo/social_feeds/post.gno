@@ -125,12 +125,20 @@ func (post *Post) Delete() {
 	post.deletedAt = time.Now()
 }
 
+// TODO: fix this, dont base on amount, we should base on value sent by user
+/*
+	sent := std.GetOrigSend()
+	anonFeeCoin := std.Coin{"ugnot", int64(gDefaultAnonFee)}
+	if len(sent) == 1 && sent[0].IsGTE(anonFeeCoin) {
+		return true
+	}
+	return false
+*/
 func (post *Post) Tip(from std.Address, to std.Address, amount int64) {
 	if amount <= 0 {
 		panic("amount is not valid")
 	}
 
-	// banker := std.GetBanker(std.BankerTypeOrigSend)
 	banker := std.GetBanker(std.BankerTypeRealmSend)
 	coinsToSend := std.Coins{std.Coin{Denom: "ugnot", Amount: amount}}
 
