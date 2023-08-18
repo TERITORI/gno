@@ -156,6 +156,16 @@ func GetPostsWithCaller(fid FeedID, callerAddrStr string, user string, categorie
 				return false
 			}
 
+			// Check if post is in hidden list
+			value, exists := feed.hiddenPostsByUser.Get(caller.String())
+			if exists {
+				hiddenPosts := value.(*avl.Tree)
+				// If post.id exists in hiddenPosts tree => that post is hidden
+				if hiddenPosts.Has(post.id.String()) {
+					return false
+				}
+			}
+
 			if skipped < offset {
 				skipped++
 				return false
@@ -218,6 +228,20 @@ func FlagPost(fid FeedID, pid PostID) {
 	feed := mustGetFeed(fid)
 
 	feed.FlagPost(caller, pid)
+}
+
+func HidePostForMe(fid FeedID, pid PostID) {
+	caller := std.PrevRealm().Addr()
+	feed := mustGetFeed(fid)
+
+	feed.HidePostForUser(caller, pid)
+}
+
+func UnHidePostForMe(fid FeedID, pid PostID) {
+	caller := std.PrevRealm().Addr()
+	feed := mustGetFeed(fid)
+
+	feed.UnHidePostForUser(caller, pid)
 }
 
 func GetFlags(fid FeedID, limit uint64, offset uint64) string {
