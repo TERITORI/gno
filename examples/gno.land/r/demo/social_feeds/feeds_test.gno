@@ -235,7 +235,8 @@ func testTipPost(t *testing.T) {
 	std.TestIssueCoins(creator, std.Coins{{"ugnot", 100_000_000}})
 
 	// NOTE: Dont know why the address should be this to be able to call banker (= std.GetCallerAt(1))
-	tipper := std.Address("g17rgsdnfxzza0sdfsdma37sdwxagsz378833ca4")
+	tipper := testutils.TestAddress("tipper")
+	std.TestIssueCoins(tipper, std.Coins{{"ugnot", 50_000_000}})
 
 	banker := std.GetBanker(std.BankerTypeReadonly)
 
@@ -244,8 +245,8 @@ func testTipPost(t *testing.T) {
 		t.Fatalf("expected creator coin count: 100_000_000, got %d.", coins[0].Amount)
 	}
 
-	if coins := banker.GetCoins(tipper); coins[0].Amount != 200_000_000 {
-		t.Fatalf("expected tipper coin count: 200_000_000, got %d.", coins[0].Amount)
+	if coins := banker.GetCoins(tipper); coins[0].Amount != 50_000_000 {
+		t.Fatalf("expected tipper coin count: 50_000_000, got %d.", coins[0].Amount)
 	}
 
 	// Creator creates feed, post
@@ -259,17 +260,8 @@ func testTipPost(t *testing.T) {
 
 	// Tiper tips the ppst
 	std.TestSetOrigCaller(tipper)
-
-	coins := banker.GetCoins(tipper)
-
-	tipperCoins := banker.GetCoins(tipper)
-
-	TipPost(feed3.id, post1.id, 1_000_000)
-
-	// Coin must be deducted from tipper
-	if coins := banker.GetCoins(tipper); coins[0].Amount != 199_000_000 {
-		t.Fatalf("expected tipper coin after tipping: 199_000_000, got %d.", coins[0].Amount)
-	}
+	std.TestSetOrigSend(std.Coins{{"ugnot", 1_000_000}}, nil)
+	TipPost(feed3.id, post1.id)
 
 	// Coin must be increased for creator
 	if coins := banker.GetCoins(creator); coins[0].Amount != 101_000_000 {
@@ -282,10 +274,35 @@ func testTipPost(t *testing.T) {
 	}
 
 	// Add more tip should update this total
-	TipPost(feed3.id, post1.id, 2_000_000)
+	std.TestSetOrigSend(std.Coins{{"ugnot", 2_000_000}}, nil)
+	TipPost(feed3.id, post1.id)
 
 	if post1.tipAmount != 3_000_000 {
 		t.Fatalf("expected total tipAmount: 3_000_000, got %d.", post1.tipAmount)
+	}
+}
+
+func testFlagPost(t *testing.T) {
+	flagger := testutils.TestAddress("flagger")
+
+	feedID9 := CreateFeed("teritori9")
+	feed9 := mustGetFeed(feedID9)
+
+	CreatePost(feed9.id, rootPostID, cat1, "metadata1")
+	pid := CreatePost(feed9.id, rootPostID, cat1, "metadata1")
+
+	// Flag post
+	std.TestSetOrigCaller(flagger)
+	FlagPost(feed9.id, pid)
+
+	// Another user flags
+	another := testutils.TestAddress("another")
+	std.TestSetOrigCaller(another)
+	FlagPost(feed9.id, pid)
+
+	flaggedPostsStr := GetFlaggedPosts(feed9.id, 0, 10)
+	if flaggedPostsCount := len(strings.Split(flaggedPostsStr, ",")); flaggedPostsCount != 1 {
+		t.Fatalf("expected flagged posts: 1, got %d.", flaggedPostsCount)
 	}
 }
 
@@ -340,7 +357,8 @@ func testMigrate(t *testing.T) {
 	// NOTE: Dont know why the address should be this to be able to call banker (= std.GetCallerAt(1))
 	tipper := std.Address("g17rgsdnfxzza0sdfsdma37sdwxagsz378833ca4")
 	std.TestSetOrigCaller(tipper)
-	TipPost(feed7.id, postID, 1_000_000)
+	std.TestSetOrigSend(std.Coins{{"ugnot", 1_000_000}}, nil)
+	TipPost(feed7.id, postID)
 
 	// Clone to Feed2
 	feed8 := &Feed{id: 8}
@@ -406,6 +424,8 @@ func Test(t *testing.T) {
 	testTipPost(t)
 
 	testFilterUser(t)
+
+	testFlagPost(t)
 
 	testMigrate(t)
 }

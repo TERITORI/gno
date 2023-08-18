@@ -14,9 +14,11 @@ import (
 // Only registered user can create a new feed
 // For the flexibility when testing, allow all user to create feed
 func CreateFeed(name string) FeedID {
+	pkgpath := std.CurrentRealmPath()
+
 	fid := incGetFeedID()
 	caller := std.PrevRealm().Addr()
-	url := "/r/demo/social_feeds_v4:" + name
+	url := strings.Replace(pkgpath, "gno.land", "", -1) + ":" + name
 	feed := newFeed(fid, url, name, caller)
 	fidkey := feedIDKey(fid)
 	gFeeds.Set(fidkey, feed)
@@ -68,18 +70,60 @@ func ReactPost(fid FeedID, pid PostID, icon string, up bool) {
 	post.React(icon, up)
 }
 
-func TipPost(fid FeedID, pid PostID, amount int64) {
+func TipPost(fid FeedID, pid PostID) {
 	caller := std.PrevRealm().Addr()
 	feed := mustGetFeed(fid)
 	post := feed.MustGetPost(pid)
 
-	post.Tip(caller, post.creator, amount)
+	post.Tip(caller, post.creator)
 }
 
-// Get Posts list
+// Get a list of flagged posts
+// NOTE: We can support multi feeds in the future but for now we will have only 1 feed
+// Return stringified list in format: postStr-count,postStr-count
+func GetFlaggedPosts(fid FeedID, offset uint64, limit uint8) string {
+	feed := mustGetFeed(fid)
+
+	// Already sorted by count descending
+	flags := feed.flags.GetFlags(uint64(limit), offset)
+
+	var postList []string
+	for _, flagCount := range flags {
+		flagID := flagCount.FlagID
+		count := flagCount.Count
+
+		feedID, postID := parseFlagID(flagID)
+		if feedID != feed.id {
+			continue
+		}
+
+		post := feed.GetPost(postID)
+		postList = append(postList, ufmt.Sprintf("%s", post))
+	}
+
+	SEPARATOR := ","
+	res := strings.Join(postList, SEPARATOR)
+	return res
+}
+
+// NOTE: due to bug of std.PrevRealm().Addr() return "" when query so we user this proxy function temporary
+// in waiting of correct behaviour of std.PrevRealm().Addr()
 func GetPosts(fid FeedID, user string, categories []uint64, offset uint64, limit uint8) string {
 	caller := std.PrevRealm().Addr()
+
+	return GetPostsWithCaller(fid, caller.String(), user, categories, offset, limit)
+}
+
+func GetPostsWithCaller(fid FeedID, callerAddrStr string, user string, categories []uint64, offset uint64, limit uint8) string {
+	// BUG: normally std.PrevRealm().Addr() should return a value instead of empty
+	// Fix is in progress on Gno side
 	feed := mustGetFeed(fid)
+	caller := std.Address(callerAddrStr)
+
+	// Return flagged posts
+	if len(categories) == 1 && categories[0] == uint64(9) {
+		return GetFlaggedPosts(fid, offset, limit)
+	}
 
 	var postList []string
 	var skipped uint64
@@ -103,6 +147,12 @@ func GetPosts(fid FeedID, user string, categories []uint64, offset uint64, limit
 			}
 
 			if user != "" && std.Address(user) != post.creator {
+				return false
+			}
+
+			// Filter hidden post
+			flagID := getFlagID(feed.id, post.id)
+			if feed.flags.HasFlagged(flagID, callerAddrStr) {
 				return false
 			}
 

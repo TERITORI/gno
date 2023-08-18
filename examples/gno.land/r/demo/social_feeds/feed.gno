@@ -3,6 +3,7 @@ package social_feeds
 import (
 	"std"
 	"strconv"
+	"strings"
 	"time"
 
 	"gno.land/p/demo/avl"
@@ -93,10 +94,16 @@ func (feed *Feed) AddPost(creator std.Address, parentID PostID, category uint64,
 func (feed *Feed) FlagPost(flagBy std.Address, pid PostID) {
 	flagID := getFlagID(feed.id, pid)
 
+	if feed.flags.HasFlagged(flagID, flagBy.String()) {
+		panic("already flagged")
+	}
+
 	feed.flags.Flag(flagID, flagBy.String())
 }
 
 func (feed *Feed) Render() string {
+	pkgpath := std.CurrentRealmPath()
+
 	str := ""
 	str += "There are " + intToString(feed.posts.Size()) + " post(s) \n\n"
 
@@ -107,7 +114,7 @@ func (feed *Feed) Render() string {
 			}
 
 			post := value.(*Post)
-			postUrl := "/r/demo/social_feeds_v4:" + feed.name + "/" + post.id.String()
+			postUrl := strings.Replace(pkgpath, "gno.land", "", -1) + ":" + feed.name + "/" + post.id.String()
 
 			str += " * [" +
 				"PostID: " + post.id.String() +
@@ -119,6 +126,9 @@ func (feed *Feed) Render() string {
 				"\n"
 			return false
 		})
+
+		str += "------------------------- \n\n"
+		str += feed.flags.Dump()
 	}
 	return str
 }

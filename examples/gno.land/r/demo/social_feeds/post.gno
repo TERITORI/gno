@@ -125,18 +125,15 @@ func (post *Post) Delete() {
 	post.deletedAt = time.Now()
 }
 
-func (post *Post) Tip(from std.Address, to std.Address, amount int64) {
-	if amount <= 0 {
-		panic("amount is not valid")
-	}
+func (post *Post) Tip(from std.Address, to std.Address) {
+	receivedCoins := std.GetOrigSend()
+	amount := receivedCoins[0].Amount
 
-	// banker := std.GetBanker(std.BankerTypeOrigSend)
-	banker := std.GetBanker(std.BankerTypeRealmSend)
-
+	banker := std.GetBanker(std.BankerTypeOrigSend)
+	// banker := std.GetBanker(std.BankerTypeRealmSend)
 	coinsToSend := std.Coins{std.Coin{Denom: "ugnot", Amount: amount}}
-
-	banker := std.GetBanker(std.BankerTypeRealmSend)
 	pkgaddr := std.GetOrigPkgAddr()
+
 	banker.SendCoins(pkgaddr, to, coinsToSend)
 
 	// Update tip amount
