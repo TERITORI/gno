@@ -13,19 +13,19 @@ import (
 	"gno.land/p/demo/jsonutil_v2"
 	"gno.land/r/demo/dao_registry_v5"
 	"gno.land/r/demo/groups_v6"
-	modboards "gno.land/r/demo/modboards_v3"
+	social_feeds "gno.land/r/demo/social_feeds"
 )
 
 var (
-	daoCore       dao_core.IDAOCore
-	registry      = dao_interfaces.NewMessagesRegistry()
-	mainBoardName = "cheeseclubdao"
-	groupID       groups.GroupID
+	daoCore      dao_core.IDAOCore
+	registry     = dao_interfaces.NewMessagesRegistry()
+	mainFeedName = "teritori"
+	groupID      groups.GroupID
 )
 
 func init() {
-	groupID = groups.CreateGroup(mainBoardName)
-	groups.AddMember(groupID, "g1sda96mry3xpuyh92klcxlfym48a6xwp526nm9x", 1, "")
+	groupID = groups.CreateGroup(mainFeedName)
+	groups.AddMember(groupID, "g1jg8mtutu9khhfwc4nxmuhcpftf0pajdhfvsqf5", 1, "")
 	registry.Register(groups.NewAddMemberHandler())
 	registry.Register(groups.NewDeleteMemberHandler())
 
@@ -45,15 +45,12 @@ func init() {
 	registry.Register(dao_proposal_single.NewUpdateSettingsHandler(proposalMod))
 	daoCore.AddProposalModule(proposalMod)
 
-	registry.Register(modboards.NewCreateBoardHandler())
-	registry.Register(modboards.NewDeletePostHandler())
-	modboards.CreateBoard(mainBoardName)
-
-	dao_registry.Register("democheeseclub", "Cheese club", "https://imgs.search.brave.com/CQo_nMMiv8VZRbKmw4XIIWlfqOVcwK5ilm6kidlBnRQ/rs:fit:500:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTY4/Mjc1ODE2L3Bob3Rv/L2NoZWVzZS5qcGc_/cz02MTJ4NjEyJnc9/MCZrPTIwJmM9cE9W/b2JkTlEwMzJTZ082/UXo0Wm85TmhSRVpI/UTc5cVJJeThXaDZ4/Y28waz0")
+	registry.Register(social_feeds.NewBanPostHandler())
+	dao_registry.Register("social_feeds_dao", "Teritori Feed DAO", "https://avatars.githubusercontent.com/u/108656591?s=200&v=4")
 }
 
 func Render(path string) string {
-	return "[[board](/r/demo/modboards:" + mainBoardName + ")]\n\n" + daoCore.Render(path)
+	return "[[feed](/r/demo/social_feeds:" + mainFeedName + ")]\n\n" + daoCore.Render(path)
 }
 
 func GetCore() dao_core.IDAOCore {

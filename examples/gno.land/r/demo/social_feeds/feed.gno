@@ -102,6 +102,14 @@ func (feed *Feed) FlagPost(flagBy std.Address, pid PostID) {
 	feed.flags.Flag(flagID, flagBy.String())
 }
 
+func (feed *Feed) BanPost(pid PostID) {
+	pidkey := postIDKey(pid)
+	_, removed := feed.posts.Remove(pidkey)
+	if !removed {
+		panic("post does not exist with id " + pid.String())
+	}
+}
+
 func (feed *Feed) HidePostForUser(caller std.Address, pid PostID) {
 	userAddr := caller.String()
 

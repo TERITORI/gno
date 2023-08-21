@@ -7,7 +7,7 @@ GNOKEY = gnokey maketx call \
     -broadcast
 
 .PHONY: create_feed
-created_feed:
+create_feed:
 	${GNOKEY} \
 	-func "CreateFeed" \
     -args "teritori" \
@@ -16,6 +16,7 @@ created_feed:
 .PHONY: create_post
 create_post:
 	${GNOKEY} \
+    -func "CreatePost" \
     -args "1" \
     -args "0" \
     -args "2" \
@@ -29,8 +30,20 @@ tip_post:
 	-func "TipPost" \
     -args "1" \
     -args "1" \
-    ${KEY}
-	
+    ${KEY}	
+
+
+.PHONY: flag_post
+flag_post:
+	${GNOKEY} \
+	-func "FlagPost" \
+    -args "1" \
+    -args "1" \
+    ${KEY}	
+
 .PHONY: get_post
 get_post:
 	gnokey query vm/qeval --data 'gno.land/r/demo/social_feeds\nGetPosts(1, "", []uint64{}, 0, 10)'
+
+.PHONY: init
+init: create_feed create_post create_post tip_post flag_post

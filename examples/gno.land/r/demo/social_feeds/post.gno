@@ -125,6 +125,21 @@ func (post *Post) Delete() {
 	post.deletedAt = time.Now()
 }
 
+func (post *Post) BanComment(pid PostID) {
+	if post.id == pid {
+		panic("should not happen")
+	}
+
+	pidkey := postIDKey(pid)
+	postI, removed := post.comments.Remove(pidkey)
+	if !removed {
+		panic("comment not found in post")
+	}
+
+	comment := postI.(*Post)
+	post.comments.Remove(pidkey)
+}
+
 func (post *Post) Tip(from std.Address, to std.Address) {
 	receivedCoins := std.GetOrigSend()
 	amount := receivedCoins[0].Amount

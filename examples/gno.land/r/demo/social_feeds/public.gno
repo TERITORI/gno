@@ -48,17 +48,50 @@ func EditPost(fid FeedID, pid PostID, category uint64, metadata string) {
 	post.Update(category, metadata)
 }
 
-// Only owner can delete the post
+// Only feed creator/owner can call this
+func SetOwner(fid FeedID, newOwner std.Address) {
+	caller := std.PrevRealm().Addr()
+	feed := mustGetFeed(fid)
+
+	if caller != feed.creator && caller != feed.owner {
+		panic("you are not creator/owner of this feed")
+	}
+
+	feed.owner = newOwner
+}
+
+// Only feed creator/owner or post creator can delete the post
 func DeletePost(fid FeedID, pid PostID) {
 	caller := std.PrevRealm().Addr()
 	feed := mustGetFeed(fid)
 	post := feed.MustGetPost(pid)
 
-	if caller != post.creator {
-		panic("you are not creator of this post")
+	if caller != post.creator && caller != feed.creator && caller != feed.owner {
+		panic("you are nor creator of this post neither creator/owner of the feed")
 	}
 
 	post.Delete()
+}
+
+// Only feed owner can ban the post
+func BanPost(fid FeedID, pid PostID, reason string) {
+	caller := std.PrevRealm().Addr()
+	feed := mustGetFeed(fid)
+	post := feed.MustGetPost(pid)
+
+	// For experimenting, we ban only the post for now
+	// TODO: recursive delete/ban comments
+	if caller != feed.owner {
+		panic("you are owner of the feed")
+	}
+
+	if post.parentID == 0 {
+		feed.BanPost(pid)
+	} else {
+		post.BanComment(pid)
+	}
+
+	feed.flags.ClearFlagCount(getFlagID(fid, pid))
 }
 
 // Any one can react post

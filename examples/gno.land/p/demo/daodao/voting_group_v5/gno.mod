@@ -1,4 +1,4 @@
-module gno.land/p/demo/daodao/
+module gno.land/p/demo/daodao/voting_group_v5
 
 require (
     "gno.land/p/demo/daodao/interfaces_v3" v0.0.0-latest
