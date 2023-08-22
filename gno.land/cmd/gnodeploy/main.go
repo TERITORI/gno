@@ -30,6 +30,7 @@ func main() {
 		depositFlag        = fs.String("deposit", "1ugnot", "deposit")
 		gasFeeFlag         = fs.String("gas-fee", "1ugnot", "gas fee")
 		gasWantedFlag      = fs.String("gas-wanted", "10000000", "gas wanted")
+		passwordFlag       = fs.String("password", "", "password")
 	)
 
 	err := ff.Parse(fs, os.Args[1:])
@@ -84,6 +85,9 @@ func main() {
 		panic("gas wanted is required")
 	}
 	gasWanted := *gasWantedFlag
+
+	// empty password is ok
+	password := *passwordFlag
 
 	fmt.Print("Target packages:\n\n")
 	for _, targetPkgPath := range targetsPkgPath {
@@ -306,7 +310,7 @@ func main() {
 
 			go func() {
 				c.ExpectString("Enter password.")
-				c.SendLine("")
+				c.SendLine(password)
 			}()
 
 			if err := cmd.Run(); err != nil {
