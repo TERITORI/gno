@@ -4,7 +4,7 @@ import (
 	"std"
 	"strings"
 
-	dao_interfaces "gno.land/p/demo/daodao/interfaces_v3"
+	dao_interfaces "gno.land/p/demo/daodao/interfaces_v6"
 	"gno.land/p/demo/markdown_utils"
 )
 

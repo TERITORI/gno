@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"gno.land/p/demo/daodao/interfaces_v3"
-	"gno.land/p/demo/jsonutil_v2"
+	"gno.land/p/demo/daodao/interfaces_v6"
+	"gno.land/p/demo/jsonutil_v4"
 )
 
 var PKG_PATH = "gno.land/r/demo/social_feeds"

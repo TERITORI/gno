@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"strings"
 
-	"gno.land/p/demo/daodao/interfaces_v3"
+	"gno.land/p/demo/daodao/interfaces_v6"
 )
 
 type UpdateSettingsMessage struct {

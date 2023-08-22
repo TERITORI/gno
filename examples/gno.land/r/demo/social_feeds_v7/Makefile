@@ -87,7 +87,7 @@ execute_proposal:
 .PHONY: add_member
 add_member:
 	${GNOKEY} \
-    -pkgpath "gno.land/r/demo/groups_v6" \
+    -pkgpath "gno.land/r/demo/groups_v9" \
     -func "AddMember" \
     -args "0000000001" \
     -args "g1kcdd3n0d472g2p5l8svyg9t0wq6h5857nq992f" \
@@ -99,7 +99,7 @@ add_member:
 add_pkg_social_feeds:
 	${ADDPKG} \
     -pkgdir="." \
-    -pkgpath="gno.land/r/demo/social_feeds_v5" \
+    -pkgpath="gno.land/r/demo/social_feeds_v7" \
     ${KEY}
 
 .PHONY: add_pkg_social_feeds_dao
@@ -111,3 +111,39 @@ add_pkg_social_feeds_dao:
 
 .PHONY: init
 init: create_feed create_post create_post tip_post flag_post
+    
+.PHONY: upgrade_pkg
+upgrade_pkg:
+    gnokey maketx addpkg \
+        -deposit="1ugnot" \
+        -gas-fee="1ugnot" \
+        -gas-wanted="7000000" \
+        -chainid="teritori-1" \
+        -remote="https://testnet.gno.teritori.com:26657" \
+        -broadcast="true" \
+        -pkgdir="." \
+        -pkgpath="gno.land/r/demo/social_feeds_dao" \
+        test1
+
+    gnokey maketx addpkg \
+        -deposit="1ugnot" \
+        -gas-fee="1ugnot" \
+        -gas-wanted="5000000" \
+        -chainid="teritori-1" \
+        -remote="https://testnet.gno.teritori.com:26657" \
+        -broadcast="true" \
+        -pkgdir="." \
+        -pkgpath="gno.land/p/demo/jsonutil_v4" \
+        test1
+
+    gnokey maketx addpkg \
+        -deposit="1ugnot" \
+        -gas-fee="1ugnot" \
+        -gas-wanted="5000000" \
+        -chainid="teritori-1" \
+        -remote="https://testnet.gno.teritori.com:26657" \
+        -broadcast="true" \
+        -pkgdir="." \
+        -pkgpath="gno.land/p/demo/daodao/core_v6" \
+        test1
+    

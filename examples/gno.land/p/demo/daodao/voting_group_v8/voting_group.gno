@@ -3,9 +3,9 @@ package dao_voting_group
 import (
 	"std"
 
-	dao_interfaces "gno.land/p/demo/daodao/interfaces_v3"
+	dao_interfaces "gno.land/p/demo/daodao/interfaces_v6"
 	"gno.land/p/demo/markdown_utils"
-	"gno.land/r/demo/groups_v6"
+	"gno.land/r/demo/groups_v9"
 )
 
 type GRC4Voting struct {

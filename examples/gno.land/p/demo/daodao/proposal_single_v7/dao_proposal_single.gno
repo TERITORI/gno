@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"gno.land/p/demo/avl"
-	dao_core "gno.land/p/demo/daodao/core_v3"
-	dao_interfaces "gno.land/p/demo/daodao/interfaces_v3"
-	"gno.land/p/demo/jsonutil_v2"
+	dao_core "gno.land/p/demo/daodao/core_v6"
+	dao_interfaces "gno.land/p/demo/daodao/interfaces_v6"
+	"gno.land/p/demo/jsonutil_v4"
 )
 
 type DAOProposalSingleOpts struct {
