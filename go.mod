@@ -3,6 +3,7 @@ module github.com/gnolang/gno
 go 1.19
 
 require (
+	github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2
 	github.com/btcsuite/btcd v0.22.0-beta.0.20220111032746-97732e52810c
 	github.com/btcsuite/btcd/btcutil v1.1.1
 	github.com/btcsuite/btcutil v1.0.2
@@ -26,6 +27,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.15
 	github.com/pelletier/go-toml v1.9.5
 	github.com/peterbourgon/ff/v3 v3.4.0
+	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/rogpeppe/go-internal v1.11.0
 	github.com/stretchr/testify v1.8.4
@@ -44,6 +46,7 @@ require (
 require (
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/creack/pty v1.1.17 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/facebookgo/ensure v0.0.0-20200202191622-63f1cf65ac4c // indirect
@@ -61,7 +64,6 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lib/pq v1.10.7 // indirect
 	github.com/lucasb-eyer/go-colorful v1.0.3 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
