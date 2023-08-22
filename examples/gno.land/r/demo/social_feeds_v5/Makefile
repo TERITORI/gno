@@ -6,6 +6,14 @@ GNOKEY = gnokey maketx call \
     -send "" \
     -broadcast
 
+ADDPKG = gnokey maketx addpkg \
+    -deposit="1ugnot" \
+    -gas-fee="1ugnot" \
+    -gas-wanted="5000000" \
+    -chainid="teritori-1" \
+    -remote="https://testnet.gno.teritori.com:26657" \
+    -broadcast="true"  \
+
 .PHONY: create_feed
 create_feed:
 	${GNOKEY} \
@@ -85,6 +93,20 @@ add_member:
     -args "g1kcdd3n0d472g2p5l8svyg9t0wq6h5857nq992f" \
     -args "1" \
     -args "" \
+    ${KEY}
+
+.PHONY: add_pkg_social_feeds
+add_pkg_social_feeds:
+	${ADDPKG} \
+    -pkgdir="." \
+    -pkgpath="gno.land/r/demo/social_feeds_v5" \
+    ${KEY}
+
+.PHONY: add_pkg_social_feeds_dao
+add_pkg_social_feeds_dao:
+	${ADDPKG} \
+    -pkgdir="../social_feeds_dao" \
+    -pkgpath="gno.land/r/demo/social_feeds_dao" \
     ${KEY}
 
 .PHONY: init

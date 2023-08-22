@@ -13,7 +13,7 @@ import (
 	"gno.land/p/demo/jsonutil_v2"
 	"gno.land/r/demo/dao_registry_v5"
 	"gno.land/r/demo/groups_v6"
-	social_feeds "gno.land/r/demo/social_feeds"
+	social_feeds "gno.land/r/demo/social_feeds_v5"
 )
 
 var (
