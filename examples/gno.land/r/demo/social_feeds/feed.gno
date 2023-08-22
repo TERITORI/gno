@@ -147,7 +147,8 @@ func (feed *Feed) Render() string {
 	pkgpath := std.CurrentRealmPath()
 
 	str := ""
-	str += "There are " + intToString(feed.posts.Size()) + " post(s) \n\n"
+	str += ufmt.Sprintf("Feed: %s (ID: %s) - Owner: %s", feed.name, feed.id, feed.owner)
+	str += "\n\n There are " + intToString(feed.posts.Size()) + " post(s) \n\n"
 
 	if feed.posts.Size() > 0 {
 		feed.posts.Iterate("", "", func(key string, value interface{}) bool {

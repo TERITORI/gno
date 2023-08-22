@@ -45,5 +45,47 @@ flag_post:
 get_post:
 	gnokey query vm/qeval --data 'gno.land/r/demo/social_feeds\nGetPosts(1, "", []uint64{}, 0, 10)'
 
+.PHONY: propose_ban_post
+propose_ban_post:
+	${GNOKEY} \
+    -pkgpath "gno.land/r/demo/social_feeds_dao" \
+	-func "Propose" \
+    -args "0" \
+    -args "Ban Post" \
+    -args "" \
+    -args "" \
+    ${KEY}	
+
+.PHONY: vote_yes
+vote_yes:
+	${GNOKEY} \
+    -pkgpath "gno.land/r/demo/social_feeds_dao" \
+	-func "Vote" \
+    -args "0" \
+    -args "0" \
+    -args "0" \
+    -args "This is not good" \
+    ${KEY}
+
+.PHONY: execute_proposal
+execute_proposal:
+	${GNOKEY} \
+    -pkgpath "gno.land/r/demo/social_feeds_dao" \
+	-func "Execute" \
+    -args "0" \
+    -args "0" \
+    ${KEY}
+
+.PHONY: add_member
+add_member:
+	${GNOKEY} \
+    -pkgpath "gno.land/r/demo/groups_v6" \
+    -func "AddMember" \
+    -args "0000000001" \
+    -args "g1kcdd3n0d472g2p5l8svyg9t0wq6h5857nq992f" \
+    -args "1" \
+    -args "" \
+    ${KEY}
+
 .PHONY: init
 init: create_feed create_post create_post tip_post flag_post

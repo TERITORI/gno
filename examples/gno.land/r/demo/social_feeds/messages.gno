@@ -22,7 +22,7 @@ type ExecutableMessageBanPost struct {
 }
 
 func (msg *ExecutableMessageBanPost) Type() string {
-	return PKG_PATH + ".BanPost"
+	return "BanPost"
 }
 
 func (msg *ExecutableMessageBanPost) String() string {

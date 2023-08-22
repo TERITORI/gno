@@ -24,8 +24,17 @@ var (
 )
 
 func init() {
+	// NOTE: why creator is: g16lcthjkpr9emfj2yemnsfmyc563jw98p4wwvgg ??????
 	groupID = groups.CreateGroup(mainFeedName)
+
+	// Create Feed
+	currentRealm := std.CurrentRealm()
+	feedID := social_feeds.CreateFeed(mainFeedName)
+
+	// For testing purpose we add 2 users
 	groups.AddMember(groupID, "g1jg8mtutu9khhfwc4nxmuhcpftf0pajdhfvsqf5", 1, "")
+	groups.AddMember(groupID, "g1kcdd3n0d472g2p5l8svyg9t0wq6h5857nq992f", 1, "")
+
 	registry.Register(groups.NewAddMemberHandler())
 	registry.Register(groups.NewDeleteMemberHandler())
 
