@@ -139,8 +139,28 @@ func main() {
 
 	fmt.Println("\nFetching versions from remote...")
 
-	roots := targetsPkgPath
+	// recursively get deps of targets
 	seen := map[string]struct{}{}
+	roots := targetsPkgPath
+	targetsAndDeps := map[string]struct{}{}
+	for len(roots) > 0 {
+		pkgPath := roots[0]
+		roots = roots[1:]
+		if _, ok := seen[pkgPath]; ok {
+			continue
+		}
+		seen[pkgPath] = struct{}{}
+		roots = append(roots, requires[pkgPath]...)
+		targetsAndDeps[pkgPath] = struct{}{}
+	}
+
+	roots = []string{}
+	for pkgPath := range targetsAndDeps {
+		roots = append(roots, pkgPath)
+	}
+
+	// find versions and upgrades
+	seen = map[string]struct{}{}
 	for len(roots) > 0 {
 		pkgPath := roots[0]
 		roots = roots[1:]
