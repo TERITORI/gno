@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
-	dao_core "gno.land/p/demo/daodao/core_v3"
-	dao_interfaces "gno.land/p/demo/daodao/interfaces_v3"
-	"gno.land/p/demo/daodao/proposal_single_v4"
-	"gno.land/p/demo/daodao/voting_group_v5"
-	"gno.land/p/demo/jsonutil_v3"
-	"gno.land/r/demo/groups_v6"
-	modboards "gno.land/r/demo/modboards_v3"
+	dao_core "gno.land/p/demo/daodao/core"
+	dao_interfaces "gno.land/p/demo/daodao/interfaces"
+	"gno.land/p/demo/daodao/proposal_single"
+	"gno.land/p/demo/daodao/voting_group"
+	"gno.land/p/demo/jsonutil"
+	"gno.land/r/demo/groups"
+	modboards "gno.land/r/demo/modboards"
 )
 
 var (

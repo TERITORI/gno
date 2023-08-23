@@ -5,10 +5,10 @@ import (
 	"std"
 	"testing"
 
-	dao_interfaces "gno.land/p/demo/daodao/interfaces_v3"
-	"gno.land/p/demo/jsonutil_v3"
-	"gno.land/r/demo/groups_v6"
-	modboards "gno.land/r/demo/modboards_v3"
+	dao_interfaces "gno.land/p/demo/daodao/interfaces"
+	"gno.land/p/demo/jsonutil"
+	"gno.land/r/demo/groups"
+	modboards "gno.land/r/demo/modboards"
 	"gno.land/r/demo/users"
 )
 
