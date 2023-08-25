@@ -1,5 +1,0 @@
-❯ gnokey maketx call -pkgpath "gno.land/r/demo/bugs/mis_ownership" -func "Edit" -gas-fee 1000000ugnot -gas-wanted 2000000 -send "" -broadcast -chainid "dev" -remote "127.0.0.1:26657" onblock-test      Native
-
-Enter password.
---= Error =--
-Data: cannot modify external-realm or non-realm object: object pkg path: gno.land/r/demo/bugs/steal_ownership, realm: gno.land/r/demo/bugs/mis_ownership
