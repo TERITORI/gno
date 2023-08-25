@@ -31,7 +31,7 @@ func main() {
 		gasFeeFlag         = fs.String("gas-fee", "1ugnot", "gas fee")
 		gasWantedFlag      = fs.String("gas-wanted", "10000000", "gas wanted")
 		passwordFlag       = fs.String("password", "", "password")
-		ignoreFlag         = fs.String("ignore", "", "ignore packages")
+		ignoreFlag         = fs.String("ignore", "gno.land/p/demo/avl", "ignore packages")
 	)
 
 	err := ff.Parse(fs, os.Args[1:])
