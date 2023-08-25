@@ -31,6 +31,7 @@ func main() {
 		gasFeeFlag         = fs.String("gas-fee", "1ugnot", "gas fee")
 		gasWantedFlag      = fs.String("gas-wanted", "10000000", "gas wanted")
 		passwordFlag       = fs.String("password", "", "password")
+		ignoreFlag         = fs.String("ignore", "", "ignore packages")
 	)
 
 	err := ff.Parse(fs, os.Args[1:])
@@ -44,6 +45,13 @@ func main() {
 	targetsPkgPath := strings.Split(*targetsPkgPathFlag, ",")
 	for i, targetPkgPath := range targetsPkgPath {
 		targetsPkgPath[i] = strings.TrimSpace(targetPkgPath)
+	}
+
+	ignoreParts := strings.Split(*ignoreFlag, ",")
+	ignores := map[string]struct{}{}
+	for i, ignore := range ignoreParts {
+		ignoreParts[i] = strings.TrimSpace(ignore)
+		ignores[ignore] = struct{}{}
 	}
 
 	if packagesRootFlag == nil || *packagesRootFlag == "" {
@@ -112,6 +120,9 @@ func main() {
 	}
 
 	for _, targetPkgPath := range targetsPkgPath {
+		if _, ok := ignores[targetPkgPath]; ok {
+			panic("target package " + targetPkgPath + " is ignored")
+		}
 		targetPackageFSPath := filepath.Join(packagesRoot, targetPkgPath)
 		targetPackageGnoModPath := filepath.Join(targetPackageFSPath, "gno.mod")
 		if _, ok := allGnoMods[targetPackageGnoModPath]; !ok {
@@ -150,6 +161,9 @@ func main() {
 			continue
 		}
 		seen[pkgPath] = struct{}{}
+		if _, ok := ignores[pkgPath]; ok {
+			continue
+		}
 		roots = append(roots, requires[pkgPath]...)
 		targetsAndDeps[pkgPath] = struct{}{}
 	}
@@ -168,6 +182,9 @@ func main() {
 			continue
 		}
 		seen[pkgPath] = struct{}{}
+		if _, ok := ignores[pkgPath]; ok {
+			continue
+		}
 		roots = append(roots, requiredBy[pkgPath]...)
 
 		// find highest version on remote
