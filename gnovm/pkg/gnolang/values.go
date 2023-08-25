@@ -204,12 +204,6 @@ func (pv *PointerValue) GetBase(store Store) Object {
 // TODO: document as something that enables into-native assignment.
 // TODO: maybe consider this as entrypoint for DataByteValue too?
 func (pv PointerValue) Assign2(alloc *Allocator, store Store, rlm *Realm, tv2 TypedValue, cu bool) {
-	shouldDebug := false
-	if strings.Contains(tv2.String(), "-element") {
-		fmt.Println("Assign2", tv2)
-		// rlm.MarkDirty(tv2.V.(*SliceValue).GetBase(store))
-		shouldDebug = true
-	}
 	// Special cases.
 	if pv.Index == PointerIndexNative {
 		// Special case if extended object && native.
@@ -282,44 +276,10 @@ func (pv PointerValue) Assign2(alloc *Allocator, store Store, rlm *Realm, tv2 Ty
 	}
 	// General case
 	if rlm != nil && pv.Base != nil {
-		if shouldDebug {
-			fmt.Println("Assign2 - DidUpdate", pv.TV, tv2)
-		}
-
 		oo1 := pv.TV.GetFirstObject(store)
-
-		markDirty := false
-		if pv.TV != nil && pv.TV.T != nil && pv.TV.V != nil && pv.TV.T.Kind() == SliceKind && tv2.T != nil && tv2.V != nil && tv2.T.Kind() == SliceKind && pv.TV.V.(*SliceValue).Length != tv2.V.(*SliceValue).Length {
-			//fmt.Println("MarkDirty weird", pv.TV, tv2)
-			markDirty = true
-		}
-
 		pv.TV.Assign(alloc, tv2, cu)
-		oo2 := tv2.GetFirstObject(store)
-		if shouldDebug {
-			fmt.Printf("Assign2 - DidUpdate after %p %p\n", oo1, oo2)
-		}
+		oo2 := pv.TV.GetFirstObject(store)
 		rlm.DidUpdate(pv.Base.(Object), oo1, oo2)
-		if markDirty {
-			//rlm.MarkDirty(oo1)
-		}
-
-		/*
-			if shouldDebug {
-				if pv.TV != nil && tv2.V != nil && oo1 != nil && oo2 != nil {
-					switch pv.TV.V.(type) {
-					case *SliceValue:
-						switch tv2.V.(type) {
-						case *SliceValue:
-							base := pv.TV.V.(*SliceValue).GetBase(store)
-							if base == tv2.V.(*SliceValue).GetBase(store) && base != nil {
-								rlm.MarkDirty(base)
-							}
-						}
-					}
-				}
-			}
-		*/
 	} else {
 		pv.TV.Assign(alloc, tv2, cu)
 	}

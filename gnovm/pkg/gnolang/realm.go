@@ -69,16 +69,8 @@ func (pid PkgID) Bytes() []byte {
 	return pid.Hashlet[:]
 }
 
-var pathsFromIds = make(map[string]string)
-
 func PkgIDFromPkgPath(path string) PkgID {
-	id := PkgID{HashBytes([]byte(path))}
-	pathsFromIds[id.String()] = path
-	return id
-}
-
-func PkgPathFromPkgID(id PkgID) string {
-	return pathsFromIds[id.String()]
+	return PkgID{HashBytes([]byte(path))}
 }
 
 func ObjectIDFromPkgPath(path string) ObjectID {
@@ -138,15 +130,6 @@ func (rlm *Realm) DidUpdate(po, xo, co Object) {
 	if rlm == nil {
 		return
 	}
-
-	shouldDebug := false
-	if (po != nil && strings.Contains(po.String(), "-element")) ||
-		(xo != nil && strings.Contains(xo.String(), "-element")) ||
-		(co != nil && strings.Contains(co.String(), "-element")) {
-		fmt.Println("intersting DidUpdate", xo, co)
-		shouldDebug = true
-	}
-
 	if debug {
 		if co != nil && co.GetIsDeleted() {
 			panic("cannot attach a deleted object")
@@ -159,48 +142,26 @@ func (rlm *Realm) DidUpdate(po, xo, co Object) {
 		}
 	}
 	if po == nil || !po.GetIsReal() {
-		if shouldDebug {
-			fmt.Println("DidUpdate - Do nothing 1")
-		}
 		return // do nothing.
 	}
 	if po.GetObjectID().PkgID != rlm.ID {
-		opid := po.GetObjectID().PkgID
-		prettyName := PkgPathFromPkgID(opid)
-		if prettyName == "" {
-			prettyName = opid.String()
-		}
-		panic(fmt.Sprintf("cannot modify external-realm or non-realm object: object pkg path: %s, realm: %s", prettyName, rlm.Path))
+		panic("cannot modify external-realm or non-realm object")
 	}
 	// From here on, po is real (not new-real).
 	// Updates to .newCreated/.newEscaped /.newDeleted made here. (first gen)
 	// More appends happen during FinalizeRealmTransactions(). (second+ gen)
 	rlm.MarkDirty(po)
-	if shouldDebug {
-		fmt.Println("MarkDirty po", po)
-	}
 	if co != nil {
 		co.IncRefCount()
 		if co.GetRefCount() > 1 {
-			if shouldDebug {
-				fmt.Println("DidUpdate - ref count case")
-			}
 			if co.GetIsEscaped() {
-				fmt.Println("DidUpdate - already escaped")
 				// already escaped
 			} else {
-				fmt.Println("DidUpdate - mark escaped")
 				rlm.MarkNewEscaped(co)
 			}
 		} else if co.GetIsReal() {
-			if shouldDebug {
-				fmt.Println("MarkDirty co", co)
-			}
 			rlm.MarkDirty(co)
 		} else {
-			if shouldDebug {
-				fmt.Println("DidUpdate - else case")
-			}
 			co.SetOwner(po)
 			rlm.MarkNewReal(co)
 		}
@@ -250,9 +211,6 @@ func (rlm *Realm) MarkNewReal(oo Object) {
 }
 
 func (rlm *Realm) MarkDirty(oo Object) {
-	if strings.Contains(oo.(Value).String(), "-element") {
-		fmt.Println("MarkDirty implem", oo)
-	}
 	if debug {
 		if !oo.GetIsReal() && !oo.GetIsNewReal() {
 			panic("should not happen")
@@ -680,9 +638,6 @@ func (rlm *Realm) markDirtyAncestors(store Store) {
 // Saves .created and .updated objects.
 func (rlm *Realm) saveUnsavedObjects(store Store) {
 	for _, co := range rlm.created {
-		if strings.Contains(co.String(), "-element") {
-			fmt.Println("saveUnsavedObjects: created:", co.String())
-		}
 		// for i := len(rlm.created) - 1; i >= 0; i-- {
 		// co := rlm.created[i]
 		if !co.GetIsNewReal() {
@@ -694,9 +649,6 @@ func (rlm *Realm) saveUnsavedObjects(store Store) {
 		}
 	}
 	for _, uo := range rlm.updated {
-		if strings.Contains(uo.String(), "-element") {
-			fmt.Println("saveUnsavedObjects: updated:", uo.String())
-		}
 		// for i := len(rlm.updated) - 1; i >= 0; i-- {
 		// uo := rlm.updated[i]
 		if !uo.GetIsDirty() {
@@ -1105,9 +1057,6 @@ func copyValueWithRefs(parent Object, val Value) Value {
 	case nil:
 		return nil
 	case StringValue:
-		if cv == "undead-element" || cv == "new-element" {
-			fmt.Println("copyValueWithRefs", cv)
-		}
 		return cv
 	case BigintValue:
 		return cv
@@ -1139,9 +1088,6 @@ func copyValueWithRefs(parent Object, val Value) Value {
 			}
 		}
 	case *ArrayValue:
-		if strings.Contains(cv.String(), "-element") {
-			fmt.Println("copyValueWithRefs slice", cv)
-		}
 		if cv.Data == nil {
 			list := make([]TypedValue, len(cv.List))
 			for i, etv := range cv.List {
@@ -1158,11 +1104,6 @@ func copyValueWithRefs(parent Object, val Value) Value {
 			}
 		}
 	case *SliceValue:
-		if strings.Contains(cv.String(), "-element") {
-			fmt.Println("copyValueWithRefs slice", cv)
-			fmt.Println("copyValue base", cv.Base.(*ArrayValue))
-
-		}
 		return &SliceValue{
 			Base:   toRefValue(parent, cv.Base),
 			Offset: cv.Offset,
