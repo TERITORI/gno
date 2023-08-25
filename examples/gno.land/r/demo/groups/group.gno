@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"gno.land/p/demo/avl"
-	"gno.land/p/demo/jsonutil"
+	"gno.land/p/demo/ujson"
 )
 
 type GroupID uint64
@@ -15,11 +15,11 @@ func (gid GroupID) String() string {
 	return strconv.Itoa(int(gid))
 }
 
-func (g *GroupID) FromJSON(ast *jsonutil.JSONASTNode) {
-	if ast.ValueKind != jsonutil.JSONTokenKindNumber {
+func (g *GroupID) FromJSON(ast *ujson.JSONASTNode) {
+	if ast.ValueKind != ujson.JSONTokenKindNumber {
 		panic("invalid type")
 	}
-	*g = GroupID(jsonutil.ParseUint64(ast.Value))
+	*g = GroupID(ujson.ParseUint64(ast.Value))
 }
 
 type Group struct {

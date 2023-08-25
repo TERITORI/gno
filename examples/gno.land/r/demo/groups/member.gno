@@ -7,20 +7,19 @@ import (
 	"time"
 
 	"gno.land/p/demo/binutils"
-	"gno.land/p/demo/jsonutil"
+	"gno.land/p/demo/ujson"
 )
 
 type MemberID uint64
 
-func (m *MemberID) FromJSON(ast *jsonutil.JSONASTNode) {
-	if ast.ValueKind != jsonutil.JSONTokenKindNumber {
-		panic("invalid type")
-	}
-	*m = MemberID(jsonutil.ParseUint64(ast.Value))
+func (m *MemberID) FromJSON(ast *ujson.JSONASTNode) {
+	var val uint64
+	ast.ParseAny(&val)
+	*m = MemberID(val)
 }
 
 func (mid MemberID) ToJSON() string {
-	return jsonutil.FormatUint64(uint64(mid))
+	return ujson.FormatAny(uint64(mid))
 }
 
 type Member struct {
@@ -36,17 +35,17 @@ func (m *Member) GetID() MemberID {
 }
 
 func (member Member) ToJSON() string {
-	return jsonutil.FormatObject([]jsonutil.KeyValue{
+	return ujson.FormatObject([]ujson.FormatKV{
 		{Key: "id", Value: member.id},
-		{Key: "address", Value: member.address.String()},
+		{Key: "address", Value: member.address},
 		{Key: "weight", Value: member.weight},
 		{Key: "metadata", Value: member.metadata},
 		// {Key: "createdAt", Value: member.createdAt.String()},
 	})
 }
 
-func (m *Member) FromJSON(ast *jsonutil.JSONASTNode) {
-	jsonutil.ParseObjectAST(ast, []*jsonutil.ParseKV{
+func (m *Member) FromJSON(ast *ujson.JSONASTNode) {
+	ast.ParseObject([]*ujson.ParseKV{
 		{Key: "id", Value: &m.id},
 		{Key: "address", Value: &m.address},
 		{Key: "weight", Value: &m.weight},

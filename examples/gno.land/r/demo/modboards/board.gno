@@ -8,7 +8,7 @@ import (
 
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/flags_index"
-	"gno.land/p/demo/jsonutil"
+	"gno.land/p/demo/ujson"
 )
 
 //----------------------------------------
@@ -16,8 +16,8 @@ import (
 
 type BoardID uint64
 
-func (bid *BoardID) FromJSON(ast *jsonutil.JSONASTNode) {
-	*bid = BoardID(jsonutil.ParseUint64(ast.Value))
+func (bid *BoardID) FromJSON(ast *ujson.JSONASTNode) {
+	*bid = BoardID(ujson.ParseUint64(ast.Value))
 }
 
 func (bid BoardID) String() string {

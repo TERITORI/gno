@@ -1,14 +1,15 @@
-package grc4
+package dao_voting_group
 
 import (
 	"std"
 	"testing"
+
+	"gno.land/r/demo/groups"
 )
 
 func Test(t *testing.T) {
 	{
-		admin := "g14u5eaheavy0ux4dmpykg2gvxpvqvexm9cyg58a"
-		g := grc4.NewGRC4Group(std.Address(admin), nil)
+		g := groups.CreateGroup("test_voting_group")
 		v := NewGRC4Voting(g)
 		got := v.TotalPower()
 		expected := uint64(0)

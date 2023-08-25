@@ -3,14 +3,14 @@ package groups
 import (
 	"testing"
 
-	"gno.land/p/demo/jsonutil"
+	"gno.land/p/demo/ujson"
 )
 
 func TestFromJSON(t *testing.T) {
 	{
 		addHandler := NewAddMemberHandler()
 		json := `{"groupId": 123, "address": "gno142", "weight": 1, "metadata": "hello"}`
-		ast := jsonutil.TokenizeAndParse(json)
+		ast := ujson.TokenizeAndParse(json)
 		msg := addHandler.FromJSON(ast).(*ExecutableMessageAddMember)
 		if msg.GroupID != 123 {
 			t.Errorf("Expected group_id to be 123, got %d", msg.GroupID)
@@ -28,7 +28,7 @@ func TestFromJSON(t *testing.T) {
 	{
 		deleteHandler := NewDeleteMemberHandler()
 		json := `{"groupId": 123, "memberId": 42}`
-		ast := jsonutil.TokenizeAndParse(json)
+		ast := ujson.TokenizeAndParse(json)
 		msg := deleteHandler.FromJSON(ast).(*ExecutableMessageDeleteMember)
 		if msg.GroupID != 123 {
 			t.Errorf("Expected group_id to be 123, got %d", msg.GroupID)

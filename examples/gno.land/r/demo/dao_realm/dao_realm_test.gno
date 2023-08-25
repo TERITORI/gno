@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	dao_interfaces "gno.land/p/demo/daodao/interfaces"
-	"gno.land/p/demo/jsonutil"
+	"gno.land/p/demo/ujson"
 	"gno.land/r/demo/groups"
 	modboards "gno.land/r/demo/modboards"
 	"gno.land/r/demo/users"
@@ -45,9 +45,9 @@ func TestUpdateMembers(t *testing.T) {
 	}
 
 	{
-		children := jsonutil.ParseSlice(membersJSON)
+		children := ujson.ParseSlice(membersJSON)
 		var member groups.Member
-		jsonutil.ParseASTAny(children[0], &member)
+		ujson.ParseASTAny(children[0], &member)
 
 		ProposeJSON(0, "Test prop 2", "A description", fmt.Sprintf(`[{"type": "gno.land/r/demo/groups.DeleteMember", "payload": {"groupId": %d, "memberId": %d}}]`, groupID, member.GetID()))
 		Vote(0, 1, dao_interfaces.VoteYes, "testing")

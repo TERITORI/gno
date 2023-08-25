@@ -8,7 +8,7 @@ import (
 	"gno.land/p/demo/avl"
 	dao_core "gno.land/p/demo/daodao/core"
 	dao_interfaces "gno.land/p/demo/daodao/interfaces"
-	"gno.land/p/demo/jsonutil"
+	"gno.land/p/demo/ujson"
 )
 
 type DAOProposalSingleOpts struct {
@@ -261,7 +261,7 @@ func (d *daoProposalSingle) Proposals() []dao_interfaces.Proposal {
 }
 
 func (d *daoProposalSingle) ProposalsJSON() string {
-	return jsonutil.FormatSlice(d.proposals)
+	return ujson.FormatSlice(d.proposals)
 }
 
 func (d *daoProposalSingle) Threshold() dao_interfaces.Threshold {

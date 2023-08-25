@@ -6,13 +6,12 @@ import (
 	"strings"
 
 	"gno.land/p/demo/avl"
-	"gno.land/p/demo/jsonutil"
+	"gno.land/p/demo/ujson"
 )
 
 type MessageHandler interface {
 	Execute(message ExecutableMessage)
-	FromBinary(b []byte) ExecutableMessage
-	FromJSON(ast *jsonutil.JSONASTNode) ExecutableMessage
+	MessageFromJSON(ast *ujson.JSONASTNode) ExecutableMessage
 	Type() string
 }
 
@@ -28,36 +27,13 @@ func (r *MessagesRegistry) Register(handler MessageHandler) {
 	r.handlers.Set(handler.Type(), handler)
 }
 
-func (r *MessagesRegistry) FromBinary(b []byte) ExecutableMessage {
-	if len(b) < 2 {
-		panic("invalid ExecutableMessage: invalid length")
-	}
-	l := binary.BigEndian.Uint16(b[:2])
-	if len(b) < int(l+2) {
-		panic("invalid ExecutableMessage: invalid length")
-	}
-	t := string(b[2 : l+2])
-
-	h, ok := r.handlers.Get(t)
-	if !ok {
-		panic("invalid ExecutableMessage: invalid message type")
-	}
-	return h.(MessageHandler).FromBinary(b)
-}
-
-func (r *MessagesRegistry) FromJSON(s string) []ExecutableMessage {
-	ast := jsonutil.TokenizeAndParse(s)
-	if ast.Kind != jsonutil.JSONKindArray {
-		panic("msgs is not an array")
-	}
-	msgs := make([]ExecutableMessage, 0, len(ast.ArrayChildren))
+func (r *MessagesRegistry) MessagesFromJSON(ast *ujson.JSONASTNode) []ExecutableMessage {
+	slice := ast.ParseSlice()
+	msgs := make([]ExecutableMessage, 0, len(slice))
 	for _, child := range ast.ArrayChildren {
-		if child.Kind != jsonutil.JSONKindObject {
-			panic("invalid ExecutableMessage: message container is not an object")
-		}
 		var messageType string
-		var payload *jsonutil.JSONASTNode
-		jsonutil.ParseObjectAST(child, []*jsonutil.ParseKV{
+		var payload *ujson.JSONASTNode
+		child.ParseObject([]*ujson.ParseKV{
 			{Key: "type", Value: &messageType},
 			{Key: "payload", Value: &payload},
 		})
@@ -65,17 +41,9 @@ func (r *MessagesRegistry) FromJSON(s string) []ExecutableMessage {
 		if !ok {
 			panic("invalid ExecutableMessage: invalid message type")
 		}
-		msgs = append(msgs, h.(MessageHandler).FromJSON(payload))
+		msgs = append(msgs, h.(MessageHandler).MessageFromJSON(payload))
 	}
 	return msgs
-}
-
-func (r *MessagesRegistry) FromBase64String(s string) ExecutableMessage {
-	b, err := base64.RawURLEncoding.DecodeString(s)
-	if err != nil {
-		panic("invalid ExecutableMessage: invalid base64 string")
-	}
-	return r.FromBinary(b)
 }
 
 func (r *MessagesRegistry) Execute(msg ExecutableMessage) {

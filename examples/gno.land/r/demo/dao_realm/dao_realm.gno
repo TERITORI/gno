@@ -10,7 +10,7 @@ import (
 	dao_interfaces "gno.land/p/demo/daodao/interfaces"
 	"gno.land/p/demo/daodao/proposal_single"
 	"gno.land/p/demo/daodao/voting_group"
-	"gno.land/p/demo/jsonutil"
+	"gno.land/p/demo/ujson"
 	"gno.land/r/demo/groups"
 	modboards "gno.land/r/demo/modboards"
 )
@@ -89,7 +89,7 @@ func ProposeJSON(moduleIndex int, title string, description string, messagesJSON
 }
 
 func GetProposalsJSON(moduleIndex int) string {
-	return jsonutil.FormatSlice(dao_core.GetProposalModule(daoCore, moduleIndex).Proposals())
+	return ujson.FormatSlice(dao_core.GetProposalModule(daoCore, moduleIndex).Proposals())
 }
 
 func GetBinaryMembers() string {
@@ -103,5 +103,5 @@ func GetBinaryMembers() string {
 
 func GetMembersJSON() string {
 	members := groups.GetMembers(groupID)
-	return jsonutil.FormatSlice(members)
+	return ujson.FormatSlice(members)
 }

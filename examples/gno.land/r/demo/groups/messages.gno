@@ -8,7 +8,7 @@ import (
 
 	"gno.land/p/demo/binutils"
 	"gno.land/p/demo/daodao/interfaces"
-	"gno.land/p/demo/jsonutil"
+	"gno.land/p/demo/ujson"
 )
 
 type ExecutableMessageAddMember struct {
@@ -79,9 +79,9 @@ func (h *AddMemberHandler) FromBinary(b []byte) dao_interfaces.ExecutableMessage
 	return ExecutableMessageAddMemberFromBinary(b)
 }
 
-func (h *AddMemberHandler) FromJSON(ast *jsonutil.JSONASTNode) dao_interfaces.ExecutableMessage {
+func (h *AddMemberHandler) FromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
 	msg := &ExecutableMessageAddMember{}
-	jsonutil.ParseObjectAST(ast, []*jsonutil.ParseKV{
+	ast.ParseObject([]*ujson.ParseKV{
 		{Key: "groupId", Value: &msg.GroupID},
 		{Key: "address", Value: &msg.Address},
 		{Key: "weight", Value: &msg.Weight},
@@ -149,9 +149,9 @@ func (h *DeleteMemberHandler) FromBinary(b []byte) dao_interfaces.ExecutableMess
 	return ExecutableMessageDeleteMemberFromBinary(b)
 }
 
-func (h *DeleteMemberHandler) FromJSON(ast *jsonutil.JSONASTNode) dao_interfaces.ExecutableMessage {
+func (h *DeleteMemberHandler) FromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
 	msg := &ExecutableMessageDeleteMember{}
-	jsonutil.ParseObjectAST(ast, []*jsonutil.ParseKV{
+	ast.ParseObject([]*ujson.ParseKV{
 		{Key: "groupId", Value: &msg.GroupID},
 		{Key: "memberId", Value: &msg.MemberID},
 	})

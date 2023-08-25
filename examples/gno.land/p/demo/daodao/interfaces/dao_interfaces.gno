@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"gno.land/p/demo/avl"
-	"gno.land/p/demo/jsonutil"
+	"gno.land/p/demo/ujson"
 )
 
 type IVotingModule interface {
@@ -21,7 +21,7 @@ type Ballot struct {
 }
 
 func (b Ballot) ToJSON() string {
-	return jsonutil.FormatObject([]jsonutil.KeyValue{
+	return ujson.FormatObject([]ujson.FormatKV{
 		{Key: "power", Value: b.Power},
 		{Key: "vote", Value: b.Vote},
 		{Key: "rationale", Value: b.Rationale},
@@ -65,7 +65,7 @@ func (v *Votes) Total() uint64 {
 }
 
 func (v Votes) ToJSON() string {
-	return jsonutil.FormatObject([]jsonutil.KeyValue{
+	return ujson.FormatObject([]ujson.FormatKV{
 		{Key: "yes", Value: v.Yes},
 		{Key: "no", Value: v.No},
 		{Key: "abstain", Value: v.Abstain},
@@ -84,15 +84,15 @@ type Proposal struct {
 	Status ProposalStatus
 }
 
-var _ jsonutil.JSONAble = (*Proposal)(nil)
+var _ ujson.JSONAble = (*Proposal)(nil)
 
 func (p Proposal) ToJSON() string {
-	return jsonutil.FormatObject([]jsonutil.KeyValue{
+	return ujson.FormatObject([]ujson.FormatKV{
 		{Key: "id", Value: p.ID},
 		{Key: "title", Value: p.Title},
 		{Key: "description", Value: p.Description},
 		{Key: "proposer", Value: p.Proposer},
-		{Key: "messages", Value: jsonutil.FormatSlice(p.Messages), Raw: true},
+		{Key: "messages", Value: ujson.FormatSlice(p.Messages), Raw: true},
 		{Key: "ballots", Value: p.Ballots},
 		{Key: "votes", Value: p.Votes},
 		{Key: "status", Value: p.Status},
@@ -108,7 +108,7 @@ const (
 )
 
 func (p ProposalStatus) ToJSON() string {
-	return jsonutil.FormatString(p.String())
+	return ujson.FormatString(p.String())
 }
 
 func (p ProposalStatus) String() string {
@@ -133,7 +133,7 @@ const (
 )
 
 func (v Vote) ToJSON() string {
-	return jsonutil.FormatString(v.String())
+	return ujson.FormatString(v.String())
 }
 
 func (v Vote) String() string {

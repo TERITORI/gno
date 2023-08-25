@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"gno.land/p/demo/daodao/interfaces"
-	"gno.land/p/demo/jsonutil"
+	"gno.land/p/demo/ujson"
 )
 
 // Create board
@@ -92,9 +92,9 @@ func (h *CreateBoardHandler) FromBinary(b []byte) dao_interfaces.ExecutableMessa
 	return ExecutableMessageCreateBoardFromBinary(b)
 }
 
-func (h *CreateBoardHandler) FromJSON(ast *jsonutil.JSONASTNode) dao_interfaces.ExecutableMessage {
+func (h *CreateBoardHandler) FromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
 	msg := &ExecutableMessageCreateBoard{}
-	jsonutil.ParseObjectAST(ast, []*jsonutil.ParseKV{
+	ast.ParseObject([]*ujson.ParseKV{
 		{Key: "name", Value: &msg.Name},
 	})
 	return msg
@@ -236,9 +236,9 @@ func (h *DeletePostHandler) FromBinary(b []byte) dao_interfaces.ExecutableMessag
 	return ExecutableMessageDeletePostFromBinary(b)
 }
 
-func (h *DeletePostHandler) FromJSON(ast *jsonutil.JSONASTNode) dao_interfaces.ExecutableMessage {
+func (h *DeletePostHandler) FromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
 	msg := &ExecutableMessageDeletePost{}
-	jsonutil.ParseObjectAST(ast, []*jsonutil.ParseKV{
+	ast.ParseObject([]*ujson.ParseKV{
 		{Key: "boardId", Value: &msg.BoardID},
 		{Key: "threadId", Value: &msg.ThreadID},
 		{Key: "postId", Value: &msg.PostID},
