@@ -5,6 +5,5 @@ require (
         "gno.land/r/demo/users" v0.0.0-latest
         "gno.land/p/demo/ujson" v0.0.0-latest
         "gno.land/p/demo/daodao/interfaces" v0.0.0-latest
-        "gno.land/p/demo/binutils" v0.0.0-latest
         "gno.land/r/demo/modboards" v0.0.0-latest
 )

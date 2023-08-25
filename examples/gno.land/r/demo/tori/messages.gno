@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"gno.land/p/demo/binutils"
 	"gno.land/p/demo/daodao/interfaces"
 	"gno.land/r/demo/users"
 )
@@ -31,27 +30,6 @@ func (msg *ExecutableMessageMintTori) String() string {
 	return strings.Join(ss, "\n---\n")
 }
 
-func (msg *ExecutableMessageMintTori) Binary() []byte {
-	b := []byte{}
-	b = append(b, binutils.EncodeLengthPrefixedStringUint16BE(msg.Type())...)
-	b = append(b, binutils.EncodeLengthPrefixedStringUint16BE(string(msg.Address))...)
-	b = binary.BigEndian.AppendUint64(b, msg.Amount)
-	return b
-}
-
-func ExecutableMessageMintToriFromBinary(b []byte) *ExecutableMessageMintTori {
-	msg := &ExecutableMessageMintTori{}
-	t, b := binutils.MustDecodeLengthPrefixedStringUint16BE(b)
-	if t != msg.Type() {
-		panic("invalid type")
-	}
-	var addr string
-	addr, b = binutils.MustDecodeLengthPrefixedStringUint16BE(b)
-	msg.Address = users.AddressOrName(addr)
-	msg.Amount, b = binary.BigEndian.Uint64(b), b[8:]
-	return msg
-}
-
 type MintToriHandler struct {
 	dao_interfaces.MessageHandler
 }
@@ -67,10 +45,6 @@ func (h *MintToriHandler) Execute(imsg dao_interfaces.ExecutableMessage) {
 
 func (h *MintToriHandler) Type() string {
 	return ExecutableMessageMintTori{}.Type()
-}
-
-func (h *MintToriHandler) FromBinary(b []byte) dao_interfaces.ExecutableMessage {
-	return ExecutableMessageMintToriFromBinary(b)
 }
 
 type ExecutableMessageBurnTori struct {
@@ -93,27 +67,6 @@ func (msg *ExecutableMessageBurnTori) String() string {
 	return strings.Join(ss, "\n---\n")
 }
 
-func (msg *ExecutableMessageBurnTori) Binary() []byte {
-	b := []byte{}
-	b = append(b, binutils.EncodeLengthPrefixedStringUint16BE(msg.Type())...)
-	b = append(b, binutils.EncodeLengthPrefixedStringUint16BE(string(msg.Address))...)
-	b = binary.BigEndian.AppendUint64(b, msg.Amount)
-	return b
-}
-
-func ExecutableMessageBurnToriFromBinary(b []byte) *ExecutableMessageBurnTori {
-	msg := &ExecutableMessageBurnTori{}
-	t, b := binutils.MustDecodeLengthPrefixedStringUint16BE(b)
-	if t != msg.Type() {
-		panic("invalid type")
-	}
-	var addr string
-	addr, b = binutils.MustDecodeLengthPrefixedStringUint16BE(b)
-	msg.Address = users.AddressOrName(addr)
-	msg.Amount, b = binary.BigEndian.Uint64(b), b[8:]
-	return msg
-}
-
 type BurnToriHandler struct {
 	dao_interfaces.MessageHandler
 }
@@ -129,8 +82,4 @@ func (h *BurnToriHandler) Execute(imsg dao_interfaces.ExecutableMessage) {
 
 func (h *BurnToriHandler) Type() string {
 	return ExecutableMessageBurnTori{}.Type()
-}
-
-func (h *BurnToriHandler) FromBinary(b []byte) dao_interfaces.ExecutableMessage {
-	return ExecutableMessageBurnToriFromBinary(b)
 }

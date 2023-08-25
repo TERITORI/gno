@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"gno.land/p/demo/binutils"
 	"gno.land/p/demo/daodao/interfaces"
 	"gno.land/p/demo/ujson"
 )
@@ -35,29 +34,6 @@ func (msg *ExecutableMessageAddMember) String() string {
 	return strings.Join(ss, "\n---\n")
 }
 
-func (msg *ExecutableMessageAddMember) Binary() []byte {
-	b := []byte{}
-	b = append(b, binutils.EncodeLengthPrefixedStringUint16BE(msg.Type())...)
-	b = binary.BigEndian.AppendUint64(b, uint64(msg.GroupID))
-	b = append(b, binutils.EncodeLengthPrefixedStringUint16BE(msg.Address)...)
-	b = binary.BigEndian.AppendUint32(b, uint32(msg.Weight))
-	b = append(b, binutils.EncodeLengthPrefixedStringUint16BE(msg.Metadata)...)
-	return b
-}
-
-func ExecutableMessageAddMemberFromBinary(b []byte) *ExecutableMessageAddMember {
-	msg := &ExecutableMessageAddMember{}
-	t, b := binutils.MustDecodeLengthPrefixedStringUint16BE(b)
-	if t != msg.Type() {
-		panic("invalid type")
-	}
-	msg.GroupID, b = GroupID(binary.BigEndian.Uint64(b)), b[8:]
-	msg.Address, b = binutils.MustDecodeLengthPrefixedStringUint16BE(b)
-	msg.Weight, b = int(binary.BigEndian.Uint32(b)), b[4:]
-	msg.Metadata, b = binutils.MustDecodeLengthPrefixedStringUint16BE(b)
-	return msg
-}
-
 type AddMemberHandler struct {
 	dao_interfaces.MessageHandler
 }
@@ -73,10 +49,6 @@ func (h *AddMemberHandler) Execute(imsg dao_interfaces.ExecutableMessage) {
 
 func (h *AddMemberHandler) Type() string {
 	return ExecutableMessageAddMember{}.Type()
-}
-
-func (h *AddMemberHandler) FromBinary(b []byte) dao_interfaces.ExecutableMessage {
-	return ExecutableMessageAddMemberFromBinary(b)
 }
 
 func (h *AddMemberHandler) FromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
@@ -109,25 +81,6 @@ func (msg *ExecutableMessageDeleteMember) String() string {
 	return strings.Join(ss, "\n---\n")
 }
 
-func (msg *ExecutableMessageDeleteMember) Binary() []byte {
-	b := []byte{}
-	b = append(b, binutils.EncodeLengthPrefixedStringUint16BE(msg.Type())...)
-	b = binary.BigEndian.AppendUint64(b, uint64(msg.GroupID))
-	b = binary.BigEndian.AppendUint64(b, uint64(msg.MemberID))
-	return b
-}
-
-func ExecutableMessageDeleteMemberFromBinary(b []byte) *ExecutableMessageDeleteMember {
-	msg := &ExecutableMessageDeleteMember{}
-	t, b := binutils.MustDecodeLengthPrefixedStringUint16BE(b)
-	if t != msg.Type() {
-		panic("invalid type")
-	}
-	msg.GroupID, b = GroupID(binary.BigEndian.Uint64(b)), b[8:]
-	msg.MemberID, b = MemberID(binary.BigEndian.Uint64(b)), b[8:]
-	return msg
-}
-
 type DeleteMemberHandler struct {
 	dao_interfaces.MessageHandler
 }
@@ -143,10 +96,6 @@ func (h *DeleteMemberHandler) Execute(imsg dao_interfaces.ExecutableMessage) {
 
 func (h *DeleteMemberHandler) Type() string {
 	return ExecutableMessageDeleteMember{}.Type()
-}
-
-func (h *DeleteMemberHandler) FromBinary(b []byte) dao_interfaces.ExecutableMessage {
-	return ExecutableMessageDeleteMemberFromBinary(b)
 }
 
 func (h *DeleteMemberHandler) FromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {

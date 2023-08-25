@@ -29,48 +29,6 @@ func (msg *ExecutableMessageCreateBoard) String() string {
 	return strings.Join(ss, "\n---\n")
 }
 
-func (msg *ExecutableMessageCreateBoard) Binary() []byte {
-	b := []byte{}
-
-	t := msg.Type()
-	b = binary.BigEndian.AppendUint16(b, uint16(len(t)))
-	b = append(b, []byte(t)...)
-
-	b = binary.BigEndian.AppendUint16(b, uint16(len(msg.Name)))
-	b = append(b, []byte(msg.Name)...)
-
-	return b
-}
-
-func ExecutableMessageCreateBoardFromBinary(b []byte) *ExecutableMessageCreateBoard {
-	msg := &ExecutableMessageCreateBoard{}
-
-	if len(b) < 2 {
-		panic("invalid length - less than 2")
-	}
-	tl := binary.BigEndian.Uint16(b[:2])
-	b = b[2:]
-	if len(b) < int(tl) {
-		panic("invalid length - less than expected")
-	}
-	t := string(b[:tl])
-	if t != msg.Type() {
-		panic("invalid type")
-	}
-	b = b[tl:]
-
-	nl := binary.BigEndian.Uint16(b[:2])
-	b = b[2:]
-	if len(b) < int(nl) {
-		panic("invalid length - less than expected")
-	}
-	n := string(b[:nl])
-	// b = b[nl:]
-	msg.Name = n
-
-	return msg
-}
-
 type CreateBoardHandler struct {
 	dao_interfaces.MessageHandler
 }
@@ -86,10 +44,6 @@ func (h *CreateBoardHandler) Execute(imsg dao_interfaces.ExecutableMessage) {
 
 func (h *CreateBoardHandler) Type() string {
 	return ExecutableMessageCreateBoard{}.Type()
-}
-
-func (h *CreateBoardHandler) FromBinary(b []byte) dao_interfaces.ExecutableMessage {
-	return ExecutableMessageCreateBoardFromBinary(b)
 }
 
 func (h *CreateBoardHandler) FromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
@@ -151,70 +105,6 @@ func (msg *ExecutableMessageDeletePost) String() string {
 	return strings.Join(ss, "\n---\n")
 }
 
-func (msg *ExecutableMessageDeletePost) Binary() []byte {
-	b := []byte{}
-
-	t := msg.Type()
-	b = binary.BigEndian.AppendUint16(b, uint16(len(t)))
-	b = append(b, []byte(t)...)
-
-	b = binary.BigEndian.AppendUint64(b, uint64(msg.BoardID))
-	b = binary.BigEndian.AppendUint64(b, uint64(msg.ThreadID))
-	b = binary.BigEndian.AppendUint64(b, uint64(msg.PostID))
-
-	b = binary.BigEndian.AppendUint16(b, uint16(len(msg.Reason)))
-	b = append(b, []byte(msg.Reason)...)
-
-	return b
-}
-
-func ExecutableMessageDeletePostFromBinary(b []byte) *ExecutableMessageDeletePost {
-	msg := &ExecutableMessageDeletePost{}
-
-	if len(b) < 2 {
-		panic("invalid length - less than 2")
-	}
-	tl := binary.BigEndian.Uint16(b[:2])
-	b = b[2:]
-	if len(b) < int(tl) {
-		panic("invalid length - less than expected")
-	}
-	t := string(b[:tl])
-	if t != msg.Type() {
-		panic("invalid type")
-	}
-	b = b[tl:]
-
-	if len(b) < 8 {
-		panic("invalid length - less than 8")
-	}
-	msg.BoardID = BoardID(binary.BigEndian.Uint64(b[:8]))
-	b = b[8:]
-
-	if len(b) < 8 {
-		panic("invalid length - less than 8")
-	}
-	msg.ThreadID = PostID(binary.BigEndian.Uint64(b[:8]))
-	b = b[8:]
-
-	if len(b) < 8 {
-		panic("invalid length - less than 8")
-	}
-	msg.PostID = PostID(binary.BigEndian.Uint64(b[:8]))
-	b = b[8:]
-
-	rl := binary.BigEndian.Uint16(b[:2])
-	b = b[2:]
-	if len(b) < int(rl) {
-		panic("invalid length - less than expected")
-	}
-	r := string(b[:rl])
-	msg.Reason = r
-	// b = b[rl:]
-
-	return msg
-}
-
 type DeletePostHandler struct {
 	dao_interfaces.MessageHandler
 }
@@ -230,10 +120,6 @@ func (h *DeletePostHandler) Execute(imsg dao_interfaces.ExecutableMessage) {
 
 func (h *DeletePostHandler) Type() string {
 	return ExecutableMessageDeletePost{}.Type()
-}
-
-func (h *DeletePostHandler) FromBinary(b []byte) dao_interfaces.ExecutableMessage {
-	return ExecutableMessageDeletePostFromBinary(b)
 }
 
 func (h *DeletePostHandler) FromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
