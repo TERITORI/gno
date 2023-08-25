@@ -164,9 +164,3 @@ type IProposalModule interface {
 
 	Render(path string) string
 }
-
-type ExecutableMessage interface {
-	String() string
-	Binary() []byte
-	Type() string
-}

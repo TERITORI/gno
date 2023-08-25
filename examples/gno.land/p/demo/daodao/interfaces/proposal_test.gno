@@ -15,16 +15,20 @@ func (m NoopMessage) String() string {
 	return "noop"
 }
 
-func (m NoopMessage) Binary() []byte {
-	return nil
-}
-
 func (m NoopMessage) Type() string {
 	return "noop-type"
 }
 
 func (m NoopMessage) ToJSON() string {
 	return ujson.FormatString(m.String())
+}
+
+func (m NoopMessage) FromJSON(ast *ujson.JSONASTNode) {
+	var val string
+	ast.ParseAny(&val)
+	if val != m.String() {
+		panic("invalid noop message")
+	}
 }
 
 func TestProposalJSON(t *testing.T) {
