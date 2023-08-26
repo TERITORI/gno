@@ -32,7 +32,7 @@ func main() {
 // # Second Post (title)
 //
 // Body of the second post. (body)
-// \- [@gnouser](/r/users:gnouser), [2009-02-13 11:31pm (UTC)](/r/demo/modboards:test_board/2) \[[reply](/r/demo/modboards?help&__func=CreateReply&bid=1&threadid=2&postid=2&body.type=textarea)] \[[x](/r/demo/modboards?help&__func=DeletePost&bid=1&threadid=2&postid=2)]
+// \- [@gnouser](/r/users:gnouser), [2009-02-13 11:31pm (UTC)](/r/demo/modboards:test_board/2) \[[reply](/r/demo/modboards?help&__func=CreateReply&bid=1&threadid=2&postid=2&body.type=textarea)] \[[🚩](/r/demo/modboards?help&__func=FlagPost&boardID=1&threadID=2&postID=2)] \[[x](/r/demo/modboards?help&__func=DeletePost&bid=1&threadid=2&postid=2)]
 //
 // > Reply of the second post
-// > \- [@gnouser](/r/users:gnouser), [2009-02-13 11:31pm (UTC)](/r/demo/modboards:test_board/2/3) \[[reply](/r/demo/modboards?help&__func=CreateReply&bid=1&threadid=2&postid=3&body.type=textarea)] \[[x](/r/demo/modboards?help&__func=DeletePost&bid=1&threadid=2&postid=3)]
+// > \- [@gnouser](/r/users:gnouser), [2009-02-13 11:31pm (UTC)](/r/demo/modboards:test_board/2/3) \[[reply](/r/demo/modboards?help&__func=CreateReply&bid=1&threadid=2&postid=3&body.type=textarea)] \[[🚩](/r/demo/modboards?help&__func=FlagPost&boardID=1&threadID=2&postID=3)] \[[x](/r/demo/modboards?help&__func=DeletePost&bid=1&threadid=2&postid=3)]

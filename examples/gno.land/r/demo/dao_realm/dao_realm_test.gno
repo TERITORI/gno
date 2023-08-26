@@ -64,8 +64,7 @@ func TestUpdateMembers(t *testing.T) {
 }
 
 func TestModeration(t *testing.T) {
-	std.TestSetOrigSend(std.Coins{{Amount: 200000000, Denom: "ugnot"}}, nil)
-	users.Register(std.Address(""), "testerer", "")
+	std.TestSetOrigSend(std.Coins{{Amount: 100000000, Denom: "ugnot"}}, nil)
 	boardID, ok := modboards.GetBoardIDFromName(mainBoardName)
 	if !ok {
 		t.Fatalf("Board %s not found", mainBoardName)

@@ -19,4 +19,4 @@ func main() {
 }
 
 // Error:
-// unauthorized
+// please register, otherwise minimum fee 100000000 is required if anonymous
