@@ -58,12 +58,10 @@ func Register(inviter std.Address, name string, profile string) {
 	// assert CallTx call.
 	std.AssertOriginCall()
 	// assert invited or paid.
-	caller := std.PrevRealm().Addr()
-	/*
-		if caller != std.GetOrigCaller() {
-			panic("should not happen") // because std.AssertOrigCall().
-		}
-	*/
+	caller := std.GetCallerAt(2)
+	if caller != std.GetOrigCaller() {
+		panic("should not happen") // because std.AssertOrigCall().
+	}
 	sentCoins := std.GetOrigSend()
 	minCoin := std.Coin{"ugnot", minFee}
 	if inviter == "" {
