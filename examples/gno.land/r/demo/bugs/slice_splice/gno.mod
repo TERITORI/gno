@@ -1,1 +1,0 @@
-module "gno.land/r/demo/bugs/slice_splice"

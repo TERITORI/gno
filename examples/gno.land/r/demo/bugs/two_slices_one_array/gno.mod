@@ -1,1 +1,0 @@
-module "gno.land/r/demo/bugs/two_slices_one_array"
