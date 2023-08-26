@@ -8,25 +8,25 @@ import (
 	"gno.land/r/demo/groups"
 )
 
-type GRC4Voting struct {
+type VotingGroup struct {
 	dao_interfaces.IVotingModule
 
 	groupID groups.GroupID
 }
 
-func NewGRC4Voting(groupID groups.GroupID) dao_interfaces.IVotingModule {
-	return &GRC4Voting{groupID: groupID}
+func NewVotingGroup(groupID groups.GroupID) dao_interfaces.IVotingModule {
+	return &VotingGroup{groupID: groupID}
 }
 
-func (v *GRC4Voting) VotingPower(addr std.Address) uint64 {
+func (v *VotingGroup) VotingPower(addr std.Address) uint64 {
 	return uint64(groups.GetMemberWeightByAddress(v.groupID, addr))
 }
 
-func (v *GRC4Voting) TotalPower() uint64 {
+func (v *VotingGroup) TotalPower() uint64 {
 	return uint64(groups.GetGroupTotalWeight(v.groupID))
 }
 
-func (v *GRC4Voting) Render(path string) string {
+func (v *VotingGroup) Render(path string) string {
 	s := "# Group Voting Module\n"
 	if groupName, found := groups.GetGroupNameFromID(v.groupID); found {
 		s = "# [Group](/r/demo/groups:" + groupName + ") Voting Module\n"
@@ -37,6 +37,6 @@ func (v *GRC4Voting) Render(path string) string {
 	return s
 }
 
-func (v *GRC4Voting) GetGroupID() groups.GroupID {
+func (v *VotingGroup) GetGroupID() groups.GroupID {
 	return v.groupID
 }

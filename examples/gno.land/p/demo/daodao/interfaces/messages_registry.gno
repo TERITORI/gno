@@ -20,10 +20,10 @@ func (r *MessagesRegistry) Register(handler MessageHandler) {
 	r.handlers.Set(handler.Type(), handler)
 }
 
-func (r *MessagesRegistry) MessagesFromJSON(ast *ujson.JSONASTNode) []ExecutableMessage {
-	slice := ast.ParseSlice()
+func (r *MessagesRegistry) MessagesFromJSON(messagesJSON string) []ExecutableMessage {
+	slice := ujson.ParseSlice(messagesJSON)
 	msgs := make([]ExecutableMessage, 0, len(slice))
-	for _, child := range ast.ArrayChildren {
+	for _, child := range slice {
 		var messageType string
 		var payload *ujson.JSONASTNode
 		child.ParseObject([]*ujson.ParseKV{

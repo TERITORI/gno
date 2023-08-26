@@ -51,7 +51,7 @@ func (h *AddMemberHandler) Type() string {
 	return ExecutableMessageAddMember{}.Type()
 }
 
-func (h *AddMemberHandler) FromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
+func (h *AddMemberHandler) MessageFromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
 	msg := &ExecutableMessageAddMember{}
 	ast.ParseObject([]*ujson.ParseKV{
 		{Key: "groupId", Value: &msg.GroupID},
@@ -98,7 +98,7 @@ func (h *DeleteMemberHandler) Type() string {
 	return ExecutableMessageDeleteMember{}.Type()
 }
 
-func (h *DeleteMemberHandler) FromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
+func (h *DeleteMemberHandler) MessageFromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
 	msg := &ExecutableMessageDeleteMember{}
 	ast.ParseObject([]*ujson.ParseKV{
 		{Key: "groupId", Value: &msg.GroupID},

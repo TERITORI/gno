@@ -10,7 +10,7 @@ import (
 func Test(t *testing.T) {
 	{
 		g := groups.CreateGroup("test_voting_group")
-		v := NewGRC4Voting(g)
+		v := NewVotingGroup(g)
 		got := v.TotalPower()
 		expected := uint64(0)
 		if got != expected {

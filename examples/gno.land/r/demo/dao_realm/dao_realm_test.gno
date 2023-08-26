@@ -34,7 +34,7 @@ func TestUpdateMembers(t *testing.T) {
 	var membersJSON string
 
 	{
-		ProposeJSON(0, "Test prop", "A description", fmt.Sprintf(`[{"type": "gno.land/r/demo/groups.AddMember", "payload": {"groupId": %d, "weight": 1, "address": "0x42", "metadata": "hello"}}]`, groupID))
+		Propose(0, "Test prop", "A description", fmt.Sprintf(`[{"type": "gno.land/r/demo/groups.AddMember", "payload": {"groupId": %d, "weight": 1, "address": "0x42", "metadata": "hello"}}]`, groupID))
 		Vote(0, 0, dao_interfaces.VoteYes, "testing")
 		Execute(0, 0)
 		membersJSON = GetMembersJSON()
@@ -46,10 +46,13 @@ func TestUpdateMembers(t *testing.T) {
 
 	{
 		children := ujson.ParseSlice(membersJSON)
+		if len(children) != 6 {
+			t.Fatalf("Expected 6 members, got %d", len(children))
+		}
 		var member groups.Member
-		ujson.ParseASTAny(children[0], &member)
+		children[0].ParseAny(&member)
 
-		ProposeJSON(0, "Test prop 2", "A description", fmt.Sprintf(`[{"type": "gno.land/r/demo/groups.DeleteMember", "payload": {"groupId": %d, "memberId": %d}}]`, groupID, member.GetID()))
+		Propose(0, "Test prop 2", "A description", fmt.Sprintf(`[{"type": "gno.land/r/demo/groups.DeleteMember", "payload": {"groupId": %d, "memberId": %d}}]`, groupID, member.GetID()))
 		Vote(0, 1, dao_interfaces.VoteYes, "testing")
 		Execute(0, 1)
 		membersJSON = GetMembersJSON()
@@ -76,7 +79,7 @@ func TestModeration(t *testing.T) {
 ## [Test thread](/r/demo/modboards:dao_realm/1)
 
 Offensive stuff
-\- [@testerer](/r/users:testerer), [2009-02-13 11:31pm UTC](/r/demo/modboards:dao_realm/1) \[[🚩](/r/demo/modboards?help&__func=FlagPost&boardID=1&threadID=1&postID=1)] \[[x](/r/demo/modboards?help&__func=DeletePost&bid=1&threadid=1&postid=1)] (0 replies, 1 red flags)
+\- [g1wymu47drhr0kuq2098m792lytgtj2nyx77yrsm](/r/users:g1wymu47drhr0kuq2098m792lytgtj2nyx77yrsm), [2009-02-13 11:31pm UTC](/r/demo/modboards:dao_realm/1) \[[🚩](/r/demo/modboards?help&__func=FlagPost&boardID=1&threadID=1&postID=1)] \[[x](/r/demo/modboards?help&__func=DeletePost&bid=1&threadid=1&postid=1)] (0 replies, 1 red flags)
 
 `
 		render := modboards.Render(mainBoardName)
@@ -85,7 +88,7 @@ Offensive stuff
 		}
 	}
 
-	ProposeJSON(0, "Test prop", "A description", fmt.Sprintf(`[{"type": "gno.land/r/demo/modboards.DeletePost", "payload": {"boardId": %d, "threadId": 1, "postId": 1, "reason": "testing"}}]`, boardID))
+	Propose(0, "Test prop", "A description", fmt.Sprintf(`[{"type": "gno.land/r/demo/modboards.DeletePost", "payload": {"boardId": %d, "threadId": 1, "postId": 1, "reason": "testing"}}]`, boardID))
 	Vote(0, 2, dao_interfaces.VoteYes, "testing")
 	Execute(0, 2)
 	{

@@ -32,7 +32,7 @@ func init() {
 	registry.Register(groups.NewAddMemberHandler())
 	registry.Register(groups.NewDeleteMemberHandler())
 
-	daoCore = dao_core.NewDAOCore(dao_voting_group.NewGRC4Voting(groupID), nil)
+	daoCore = dao_core.NewDAOCore(dao_voting_group.NewVotingGroup(groupID), nil)
 
 	tt := dao_interfaces.Percent(100) // 1%
 	tq := dao_interfaces.Percent(100) // 1%
@@ -69,36 +69,14 @@ func Execute(moduleIndex int, proposalID int) {
 	dao_core.GetProposalModule(daoCore, moduleIndex).Execute(proposalID)
 }
 
-func Propose(moduleIndex int, title string, description string, b64Messages string) {
+func Propose(moduleIndex int, title string, description string, messagesJSON string) {
 	mod := dao_core.GetProposalModule(daoCore, moduleIndex)
-	var messages []dao_interfaces.ExecutableMessage
-	if len(b64Messages) != 0 {
-		rawMessages := strings.Split(b64Messages, ",")
-		for _, rawMessage := range rawMessages {
-			message := registry.FromBase64String(rawMessage)
-			messages = append(messages, message)
-		}
-	}
-	mod.Propose(title, description, messages)
-}
-
-func ProposeJSON(moduleIndex int, title string, description string, messagesJSON string) {
-	mod := dao_core.GetProposalModule(daoCore, moduleIndex)
-	messages := registry.FromJSON(messagesJSON)
+	messages := registry.MessagesFromJSON(messagesJSON)
 	mod.Propose(title, description, messages)
 }
 
 func GetProposalsJSON(moduleIndex int) string {
 	return ujson.FormatSlice(dao_core.GetProposalModule(daoCore, moduleIndex).Proposals())
-}
-
-func GetBinaryMembers() string {
-	members := groups.GetMembers(groupID)
-	ss := []string{}
-	for _, member := range members {
-		ss = append(ss, base64.RawURLEncoding.EncodeToString(member.Bytes()))
-	}
-	return strings.Join(ss, ",")
 }
 
 func GetMembersJSON() string {

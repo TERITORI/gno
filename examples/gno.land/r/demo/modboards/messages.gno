@@ -46,7 +46,7 @@ func (h *CreateBoardHandler) Type() string {
 	return ExecutableMessageCreateBoard{}.Type()
 }
 
-func (h *CreateBoardHandler) FromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
+func (h *CreateBoardHandler) MessageFromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
 	msg := &ExecutableMessageCreateBoard{}
 	ast.ParseObject([]*ujson.ParseKV{
 		{Key: "name", Value: &msg.Name},
@@ -122,7 +122,7 @@ func (h *DeletePostHandler) Type() string {
 	return ExecutableMessageDeletePost{}.Type()
 }
 
-func (h *DeletePostHandler) FromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
+func (h *DeletePostHandler) MessageFromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
 	msg := &ExecutableMessageDeletePost{}
 	ast.ParseObject([]*ujson.ParseKV{
 		{Key: "boardId", Value: &msg.BoardID},
