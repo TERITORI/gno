@@ -11,7 +11,7 @@ func TestFromJSON(t *testing.T) {
 		addHandler := NewAddMemberHandler()
 		json := `{"groupId": 123, "address": "gno142", "weight": 1, "metadata": "hello"}`
 		ast := ujson.TokenizeAndParse(json)
-		msg := addHandler.FromJSON(ast).(*ExecutableMessageAddMember)
+		msg := addHandler.MessageFromJSON(ast).(*ExecutableMessageAddMember)
 		if msg.GroupID != 123 {
 			t.Errorf("Expected group_id to be 123, got %d", msg.GroupID)
 		}
@@ -29,7 +29,7 @@ func TestFromJSON(t *testing.T) {
 		deleteHandler := NewDeleteMemberHandler()
 		json := `{"groupId": 123, "memberId": 42}`
 		ast := ujson.TokenizeAndParse(json)
-		msg := deleteHandler.FromJSON(ast).(*ExecutableMessageDeleteMember)
+		msg := deleteHandler.MessageFromJSON(ast).(*ExecutableMessageDeleteMember)
 		if msg.GroupID != 123 {
 			t.Errorf("Expected group_id to be 123, got %d", msg.GroupID)
 		}
