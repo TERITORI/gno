@@ -10,7 +10,3 @@ var (
 func init() {
 	steal_ownership.Steal(ptr)
 }
-
-func Mutate() {
-	*ptr = 21
-}
