@@ -42,8 +42,6 @@ type DAOProposalSingleOpts struct {
 	/// remain open until the DAO's treasury was large enough for it to be
 	/// executed.
 	CloseProposalOnExecutionFailure bool
-
-	Registry *dao_interfaces.MessagesRegistry
 }
 
 type daoProposalSingle struct {
@@ -61,10 +59,6 @@ func NewDAOProposalSingle(core dao_core.IDAOCore, opts *DAOProposalSingleOpts) *
 
 	if opts == nil {
 		panic("opts cannot be nil")
-	}
-
-	if opts.Registry == nil {
-		panic("opts.Registry cannot be nil")
 	}
 
 	if opts.AllowRevoting {
@@ -250,12 +244,11 @@ func (d *daoProposalSingle) Execute(proposalID int) {
 		panic("proposal is not passed")
 	}
 
-	d.opts.Registry.ExecuteMessages(prop.Messages)
+	d.core.ExecuteMessages(prop.Messages)
 
 	d.proposals[proposalID].Status = dao_interfaces.ProposalStatusExecuted
 }
 
-// FIXME: should probably return a copy for safety
 func (d *daoProposalSingle) Proposals() []dao_interfaces.Proposal {
 	return d.proposals
 }

@@ -17,7 +17,6 @@ import (
 
 var (
 	daoCore       dao_core.IDAOCore
-	registry      = dao_interfaces.NewMessagesRegistry()
 	mainBoardName = "dao_realm"
 	groupID       groups.GroupID
 )
@@ -29,10 +28,11 @@ func init() {
 	groups.AddMember(groupID, "g14u5eaheavy0ux4dmpykg2gvxpvqvexm9cyg58a", 1, "")
 	groups.AddMember(groupID, "g1ckn395mpttp0vupgtratyufdaakgh8jgkmr3ym", 1, "")
 	groups.AddMember(groupID, std.GetOrigCaller().String(), 1, "")
-	registry.Register(groups.NewAddMemberHandler())
-	registry.Register(groups.NewDeleteMemberHandler())
 
-	daoCore = dao_core.NewDAOCore(dao_voting_group.NewVotingGroup(groupID), nil)
+	daoCore = dao_core.NewDAOCore(dao_voting_group.NewVotingGroup(groupID), nil, []dao_interfaces.MessageHandler{
+		groups.NewAddMemberHandler(),
+		groups.NewDeleteMemberHandler(),
+	})
 
 	tt := dao_interfaces.Percent(100) // 1%
 	tq := dao_interfaces.Percent(100) // 1%
@@ -42,14 +42,13 @@ func init() {
 			Threshold: dao_interfaces.PercentageThreshold{Percent: &tt},
 			Quorum:    dao_interfaces.PercentageThreshold{Percent: &tq},
 		}},
-		Registry: registry,
 	})
 	// TODO: add a router to support multiple proposal modules
-	registry.Register(dao_proposal_single.NewUpdateSettingsHandler(proposalMod))
+	daoCore.RegisterMessageHandler(dao_proposal_single.NewUpdateSettingsHandler(proposalMod))
 	daoCore.AddProposalModule(proposalMod)
 
-	registry.Register(modboards.NewCreateBoardHandler())
-	registry.Register(modboards.NewDeletePostHandler())
+	daoCore.RegisterMessageHandler(modboards.NewCreateBoardHandler())
+	daoCore.RegisterMessageHandler(modboards.NewDeletePostHandler())
 	modboards.CreateBoard(mainBoardName)
 }
 
@@ -71,8 +70,8 @@ func Execute(moduleIndex int, proposalID int) {
 
 func Propose(moduleIndex int, title string, description string, messagesJSON string) {
 	mod := dao_core.GetProposalModule(daoCore, moduleIndex)
-	messages := registry.MessagesFromJSON(messagesJSON)
-	mod.Propose(title, description, messages)
+	messages := daoCore.GetRegistry().MessagesFromJSON(messagesJSON)
+	mod.Propose(title, description, messages) // the unmarshal should be done in module
 }
 
 func GetProposalsJSON(moduleIndex int) string {
