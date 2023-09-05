@@ -134,6 +134,14 @@ func testGetPosts(t *testing.T) {
 	if postIDsStr != "3,2,1" {
 		t.Fatalf("expected posts order: 3,2,1. Got: %s", postIDsStr)
 	}
+
+	// Query out of range
+	posts = getPosts(feed, user.String(), "", []uint64{}, 6, 3)
+	postIDsStr = toPostIDsStr(posts)
+
+	if postIDsStr != "" {
+		t.Fatalf("expected posts order: ''. Got: %s", postIDsStr)
+	}
 }
 
 func testReactPost(t *testing.T) {
