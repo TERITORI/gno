@@ -2,6 +2,7 @@ package social_feeds
 
 import (
 	"encoding/base64"
+	"fmt"
 	"std"
 	"strconv"
 	"strings"
@@ -38,9 +39,8 @@ func testCreateFeed(t *testing.T) {
 	feedID := CreateFeed("teritori1")
 	feed := mustGetFeed(feedID)
 
-	// We have default teritori feed so total should be 2
-	if feedID != 2 {
-		t.Fatalf("expected feedID: 2, got %q.", feedID)
+	if feedID != 1 {
+		t.Fatalf("expected feedID: 1, got %q.", feedID)
 	}
 
 	if feed.name != "teritori1" {
@@ -60,6 +60,79 @@ func testCreatePost(t *testing.T) {
 
 	if post.category != cat1 {
 		t.Fatalf("expected categoryID: %q, got %q.", cat1, post.category)
+	}
+}
+
+func toPostIDsStr(posts []*Post) string {
+	var postIDs []string
+	for _, post := range posts {
+		postIDs = append(postIDs, post.id.String())
+	}
+
+	postIDsStr := strings.Join(postIDs, ",")
+	return postIDsStr
+}
+
+func testGetPosts(t *testing.T) {
+	user := std.Address("user")
+	std.TestSetOrigCaller(user)
+
+	feedID := CreateFeed("teritori10")
+	feed := mustGetFeed(feedID)
+
+	CreatePost(feedID, rootPostID, cat1, "post1")
+	CreatePost(feedID, rootPostID, cat1, "post2")
+	CreatePost(feedID, rootPostID, cat1, "post3")
+	CreatePost(feedID, rootPostID, cat1, "post4")
+	CreatePost(feedID, rootPostID, cat1, "post5")
+	postIDToFlagged := CreatePost(feedID, rootPostID, cat1, "post6")
+	postIDToHide := CreatePost(feedID, rootPostID, cat1, "post7")
+	CreatePost(feedID, rootPostID, cat1, "post8")
+
+	var posts []*Post
+	var postIDsStr string
+
+	// Query last 3 posts
+	posts = getPosts(feed, "", "", []uint64{}, 0, 3)
+	postIDsStr = toPostIDsStr(posts)
+
+	if postIDsStr != "8,7,6" {
+		t.Fatalf("expected posts order: 8,7,6. Got: %s", postIDsStr)
+	}
+
+	// Query page 2
+	posts = getPosts(feed, "", "", []uint64{}, 3, 3)
+	postIDsStr = toPostIDsStr(posts)
+	if postIDsStr != "5,4,3" {
+		t.Fatalf("expected posts order: 5,4,3. Got: %s", postIDsStr)
+	}
+
+	// Exclude hidden post
+	HidePostForMe(feed.id, postIDToHide)
+
+	posts = getPosts(feed, user.String(), "", []uint64{}, 0, 3)
+	postIDsStr = toPostIDsStr(posts)
+
+	if postIDsStr != "8,6,5" {
+		t.Fatalf("expected posts order: 8,6,5. Got: %s", postIDsStr)
+	}
+
+	// Exclude flagged post
+	FlagPost(feed.id, postIDToFlagged)
+
+	posts = getPosts(feed, user.String(), "", []uint64{}, 0, 3)
+	postIDsStr = toPostIDsStr(posts)
+
+	if postIDsStr != "8,5,4" {
+		t.Fatalf("expected posts order: 8,5,4. Got: %s", postIDsStr)
+	}
+
+	// Pagination with hidden/flagged posts
+	posts = getPosts(feed, user.String(), "", []uint64{}, 3, 3)
+	postIDsStr = toPostIDsStr(posts)
+
+	if postIDsStr != "3,2,1" {
+		t.Fatalf("expected posts order: 3,2,1. Got: %s", postIDsStr)
 	}
 }
 
@@ -441,6 +514,8 @@ func Test(t *testing.T) {
 	testCreateFeed(t)
 
 	testCreatePost(t)
+
+	testGetPosts(t)
 
 	testReactPost(t)
 

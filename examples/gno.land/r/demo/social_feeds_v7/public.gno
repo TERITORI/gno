@@ -148,17 +148,32 @@ func GetPosts(fid FeedID, user string, categories []uint64, offset uint64, limit
 }
 
 func GetPostsWithCaller(fid FeedID, callerAddrStr string, user string, categories []uint64, offset uint64, limit uint8) string {
-	// BUG: normally std.PrevRealm().Addr() should return a value instead of empty
-	// Fix is in progress on Gno side
-	feed := mustGetFeed(fid)
-	caller := std.Address(callerAddrStr)
-
-	// Return flagged posts
+	// Return flagged posts, we process flagged posts differently using FlagIndex
 	if len(categories) == 1 && categories[0] == uint64(9) {
 		return GetFlaggedPosts(fid, offset, limit)
 	}
 
-	var postList []string
+	// BUG: normally std.PrevRealm().Addr() should return a value instead of empty
+	// Fix is in progress on Gno side
+	feed := mustGetFeed(fid)
+	posts := getPosts(feed, callerAddrStr, user, categories, offset, limit)
+
+	SEPARATOR := ","
+	var postListStr []string
+
+	for _, post := range posts {
+		postListStr = append(postListStr, post.String())
+	}
+
+	res := strings.Join(postListStr, SEPARATOR)
+	return res
+}
+
+// user here is: filter by user
+func getPosts(feed *Feed, callerAddrStr string, user string, categories []uint64, offset uint64, limit uint8) []*Post {
+	caller := std.Address(callerAddrStr)
+
+	var posts []*Post
 	var skipped uint64
 
 	// Create an avlTree for optimizing the check
@@ -168,7 +183,7 @@ func GetPostsWithCaller(fid FeedID, callerAddrStr string, user string, categorie
 		requestedCategories.Set(catStr, true)
 	}
 
-	feed.posts.Iterate("", "", func(key string, value interface{}) bool {
+	feed.posts.ReverseIterate("", "", func(key string, value interface{}) bool {
 		post := value.(*Post)
 
 		postCatStr := strconv.FormatUint(post.category, 10)
@@ -204,19 +219,17 @@ func GetPostsWithCaller(fid FeedID, callerAddrStr string, user string, categorie
 				return false
 			}
 
-			postList = append(postList, post.String())
+			posts = append(posts, post)
 		}
 
-		if len(postList) == limit {
+		if len(posts) == limit {
 			return true
 		}
 
 		return false
 	})
 
-	SEPARATOR := ","
-	res := strings.Join(postList, SEPARATOR)
-	return res
+	return posts
 }
 
 // Get comments list
