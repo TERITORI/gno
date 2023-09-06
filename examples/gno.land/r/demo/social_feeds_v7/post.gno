@@ -11,6 +11,7 @@ import (
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/binutils"
 	"gno.land/p/demo/ufmt"
+	"gno.land/p/demo/ujson"
 )
 
 type PostID uint64
@@ -179,6 +180,41 @@ func (post *Post) React(icon string, up bool) {
 
 func (post *Post) Render() string {
 	return post.metadata
+}
+
+func (post *Post) ToJSON() string {
+	comments := []*Post{}
+	post.comments.Iterate("", "", func(key string, value interface{}) bool {
+		comment := value.(*Post)
+		comments = append(comments, comment)
+		return false
+	})
+
+	reactionsKV := []ujson.FormatKV{}
+	post.reactions.Iterate("", "", func(key string, value interface{}) bool {
+		count := value.(int)
+		data := ujson.FormatKV{Key: key, Value: count}
+		reactionsKV = append(reactionsKV, data)
+		return false
+	})
+	reactions := ujson.FormatObject(reactionsKV)
+
+	postJSON := ujson.FormatObject([]ujson.FormatKV{
+		{Key: "id", Value: post.id},
+		{Key: "parentID", Value: post.parentID},
+		{Key: "feedID", Value: post.feedID},
+		{Key: "category", Value: post.category},
+		{Key: "metadata", Value: post.metadata},
+		{Key: "reactions", Value: reactions, Raw: true},
+		{Key: "comments", Value: ujson.FormatSlice(comments), Raw: true},
+		{Key: "creator", Value: post.creator},
+		{Key: "tipAmount", Value: post.tipAmount},
+		{Key: "deleted", Value: post.deleted},
+		{Key: "createdAt", Value: post.createdAt},
+		{Key: "updatedAt", Value: post.updatedAt},
+		{Key: "deletedAt", Value: post.deletedAt},
+	})
+	return postJSON
 }
 
 func (post *Post) MigrateFrom(srcPost *Post) {

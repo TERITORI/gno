@@ -9,6 +9,7 @@ import (
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/flags_index"
 	"gno.land/p/demo/ufmt"
+	"gno.land/p/demo/ujson"
 )
 
 type FeedID uint64
@@ -25,7 +26,6 @@ type Feed struct {
 	owner     std.Address
 	posts     avl.Tree // pidkey -> *Post
 	createdAt time.Time
-	deleted   avl.Tree
 
 	flags             *flags_index.FlagsIndex
 	hiddenPostsByUser avl.Tree // std.Address => *avl.Tree (postID => bool)
@@ -50,7 +50,6 @@ func newFeed(fid FeedID, url string, name string, creator std.Address) *Feed {
 		owner:     creator,
 		posts:     avl.Tree{},
 		createdAt: time.Now(),
-		deleted:   avl.Tree{},
 		flags:     flags_index.NewFlagsIndex(),
 		postsCtr:  0,
 	}
@@ -192,6 +191,42 @@ func (feed *Feed) Render() string {
 	}
 
 	return str
+}
+
+func (feed *Feed) ToJSON() string {
+	posts := []*Post{}
+	feed.posts.Iterate("", "", func(key string, value interface{}) bool {
+		post := value.(*Post)
+		posts = append(posts, post)
+		return false
+	})
+
+	feedJSON := ujson.FormatObject([]ujson.FormatKV{
+		{Key: "id", Value: feed.id},
+		{Key: "url", Value: feed.url},
+		{Key: "name", Value: feed.name},
+		{Key: "creator", Value: feed.creator},
+		{Key: "owner", Value: feed.owner},
+		{Key: "posts", Value: ujson.FormatSlice(posts), Raw: true},
+		{Key: "createdAt", Value: feed.createdAt},
+		{Key: "postsCtr", Value: feed.postsCtr},
+		// TODO: convert flags, hiddenPostsByUser
+		// {Key: "flags", Value: feed.flags},
+		// {Key: "hiddenPostsByUser", Value: feed.hiddenPostsByUser},
+	})
+	return feedJSON
+}
+
+func (feed *Feed) FromJSON(jsonData string) {
+	ast := ujson.JSONASTNode{}
+
+	ast.ParseSlice([]*ujson.ParseKV{
+		{Key: "id", Value: &feed.id},
+		{Key: "url", Value: &feed.url},
+		{Key: "name", Value: &feed.name},
+		{Key: "creator", Value: &feed.creator},
+		{Key: "owner", Value: &feed.owner},
+	})
 }
 
 func (feed *Feed) MigrateFrom(srcFeed *Feed) {

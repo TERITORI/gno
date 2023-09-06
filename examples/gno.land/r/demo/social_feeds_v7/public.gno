@@ -9,6 +9,7 @@ import (
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/flags_index"
 	"gno.land/p/demo/ufmt"
+	"gno.land/p/demo/ujson"
 )
 
 // Only registered user can create a new feed
@@ -311,6 +312,67 @@ func GetFlags(fid FeedID, limit uint64, offset uint64) string {
 // TODO: allow only creator to call
 func GetFeedByID(fid FeedID) *Feed {
 	return mustGetFeed(fid)
+}
+
+// TODO: allow only admin to call
+func ExportFeedData(fid FeedID) string {
+	feed := mustGetFeed(fid)
+	feedJSON := feed.ToJSON()
+	return feedJSON
+}
+
+// TODO: allow only admin to call
+func ImportFeedData(fid FeedID, jsonData string) string {
+	feed := mustGetFeed(fid)
+
+	ast := ujson.JSONASTNode{}
+	feed.FromJSON(jsonData)
+
+	// id        FeedID
+	// url       string
+	// name      string
+	// creator   std.Address
+	// owner     std.Address
+
+	// tokens := ujson.tokenize(jsonData)
+	// if len(tokens) == 0 {
+	// 	panic("empty json")
+	// }
+	// remainingTokens, ast := parseAST(tokens)
+	// if len(remainingTokens) > 0 {
+	// 	panic("invalid json")
+	// }
+
+	// panic(ast)
+
+	// return ast.ParseSlice()
+
+	// ujson.ParseObject([]*ParseKV{
+	// 	{Key: "id", Value: &feed.id},
+	// 	{Key: "url", Value: &feed.url},
+	// 	{Key: "name", Value: &feed.name},
+	// 	{Key: "creator", Value: &feed.creator},
+	// 	{Key: "owner", Value: &feed.owner},
+	// })
+
+	// ast.ParseObject([]*ParseKV{
+	// 	{Key: "a", ArrayParser: func(children []*JSONASTNode) {
+	// 		tt.A = make([]string, len(children))
+	// 		for i, child := range children {
+	// 			child.ParseAny(&tt.A[i])
+	// 		}
+	// 	}},
+	// 	{Key: "b", Value: &tt.B},
+	// 	{Key: "c", Value: &tt.C},
+	// 	{Key: "d", Value: &tt.D},
+	// 	{Key: "e", Value: &tt.E},
+	// 	{Key: "f", Value: &tt.F},
+	// 	{Key: "g", Value: &tt.G},
+	// 	{Key: "avlTree", CustomParser: func(node *JSONASTNode) {
+	// 		t := ""
+	// 		tt.AVLTree = node.ParseAVLTree(&t)
+	// 	}},
+	// })
 }
 
 func MigrateFromPreviousFeed() {
