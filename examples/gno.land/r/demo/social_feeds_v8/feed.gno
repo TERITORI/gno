@@ -25,7 +25,7 @@ type Feed struct {
 	creator   std.Address
 	owner     std.Address
 	posts     avl.Tree // pidkey -> *Post
-	createdAt time.Time
+	createdAt int64
 
 	flags             *flags_index.FlagsIndex
 	hiddenPostsByUser avl.Tree // std.Address => *avl.Tree (postID => bool)
@@ -49,7 +49,7 @@ func newFeed(fid FeedID, url string, name string, creator std.Address) *Feed {
 		creator:   creator,
 		owner:     creator,
 		posts:     avl.Tree{},
-		createdAt: time.Now(),
+		createdAt: time.Now().Unix(),
 		flags:     flags_index.NewFlagsIndex(),
 		postsCtr:  0,
 	}
@@ -197,9 +197,8 @@ func (feed *Feed) ToJSON() string {
 		})
 		return false
 	})
-
 	feedJSON := ujson.FormatObject([]ujson.FormatKV{
-		{Key: "id", Value: feed.id},
+		{Key: "id", Value: uint64(feed.id)},
 		{Key: "url", Value: feed.url},
 		{Key: "name", Value: feed.name},
 		{Key: "creator", Value: feed.creator},
@@ -217,7 +216,10 @@ func (feed *Feed) ToJSON() string {
 func (feed *Feed) FromJSON(jsonData string) {
 	ast := ujson.TokenizeAndParse(jsonData)
 	ast.ParseObject([]*ujson.ParseKV{
-		{Key: "id", Value: &feed.id},
+		{Key: "id", CustomParser: func(node *ujson.JSONASTNode) {
+			fid, _ := strconv.Atoi(node.Value)
+			feed.id = FeedID(fid)
+		}},
 		{Key: "url", Value: &feed.url},
 		{Key: "name", Value: &feed.name},
 		{Key: "creator", Value: &feed.creator},

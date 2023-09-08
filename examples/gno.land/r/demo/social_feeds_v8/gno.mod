@@ -1,4 +1,4 @@
-module gno.land/r/demo/social_feeds_v7
+module gno.land/r/demo/social_feeds_v8
 
 require (
         "gno.land/p/demo/ufmt" v0.0.0-latest
@@ -6,5 +6,4 @@ require (
         "gno.land/p/demo/avl" v0.0.0-latest
         "gno.land/r/demo/users" v0.0.0-latest
         "gno.land/r/demo/social_feeds_v7" v0.0.0-latest
-
 )

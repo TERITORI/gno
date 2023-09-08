@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"gno.land/p/demo/avl"
-	"gno.land/p/demo/binutils"
 	"gno.land/p/demo/ufmt"
 	"gno.land/p/demo/ujson"
 )
@@ -47,9 +46,9 @@ type Post struct {
 	tipAmount uint64
 	deleted   bool
 
-	createdAt time.Time
-	updatedAt time.Time
-	deletedAt time.Time
+	createdAt int64
+	updatedAt int64
+	deletedAt int64
 }
 
 func newPost(feed *Feed, id PostID, creator std.Address, parentID PostID, category uint64, metadata string) *Post {
@@ -61,53 +60,23 @@ func newPost(feed *Feed, id PostID, creator std.Address, parentID PostID, catego
 		metadata:  metadata,
 		reactions: avl.Tree{},
 		creator:   creator,
-		createdAt: time.Now(),
+		createdAt: time.Now().Unix(),
 	}
 }
 
-func (post *Post) Bytes() []byte {
-	b := []byte{}
-	b = binary.BigEndian.AppendUint64(b, uint64(post.id))
-	b = binary.BigEndian.AppendUint64(b, uint64(post.parentID))
-	b = binary.BigEndian.AppendUint64(b, uint64(post.feedID))
-	b = binary.BigEndian.AppendUint64(b, post.category)
-	b = append(b, EncodeLengthPrefixedStringUint32BE(post.metadata)...)
-	b = append(b, binutils.EncodeLengthPrefixedStringUint16BE(post.creator.String())...)
-	b = binary.BigEndian.AppendUint32(b, uint32(post.createdAt.Unix()))
-
-	// Encode reactions
-	var reactionsArr []string
-	post.reactions.Iterate("", "", func(key string, value interface{}) bool {
-		icon := key
-		count := value.(int)
-
-		reactionsArr = append(reactionsArr, ufmt.Sprintf("%s:%d", icon, count))
-		return false
-	})
-
-	SEPARATOR := ","
-	reactionsStr := strings.Join(reactionsArr, SEPARATOR)
-	b = append(b, EncodeLengthPrefixedStringUint32BE(reactionsStr)...)
-
-	// Add tipAmount
-	b = binary.BigEndian.AppendUint64(b, post.tipAmount)
-
-	return b
-}
-
 func (post *Post) String() string {
-	return bytesToString(post.Bytes())
+	return post.ToJSON()
 }
 
 func (post *Post) Update(category uint64, metadata string) {
 	post.category = category
 	post.metadata = metadata
-	post.updatedAt = time.Now()
+	post.updatedAt = time.Now().Unix()
 }
 
 func (post *Post) Delete() {
 	post.deleted = true
-	post.deletedAt = time.Now()
+	post.deletedAt = time.Now().Unix()
 }
 
 func (post *Post) Tip(from std.Address, to std.Address) {
@@ -154,11 +123,25 @@ func (post *Post) Render() string {
 func (post *Post) FromJSON(jsonData string) {
 	ast := ujson.TokenizeAndParse(jsonData)
 	ast.ParseObject([]*ujson.ParseKV{
-		{Key: "id", Value: &post.id},
-		{Key: "parentID", Value: &post.parentID},
-		{Key: "feedID", Value: &post.feedID},
+		{Key: "id", CustomParser: func(node *ujson.JSONASTNode) {
+			pid, _ := strconv.Atoi(node.Value)
+			post.id = PostID(pid)
+		}},
+		{Key: "parentID", CustomParser: func(node *ujson.JSONASTNode) {
+			pid, _ := strconv.Atoi(node.Value)
+			post.parentID = PostID(pid)
+		}},
+		{Key: "feedID", CustomParser: func(node *ujson.JSONASTNode) {
+			fid, _ := strconv.Atoi(node.Value)
+			post.feedID = FeedID(fid)
+		}},
 		{Key: "category", Value: &post.category},
-		{Key: "metadata", Value: &post.metadata},
+		// NOTE: The parser use " to detect token in JSON format so it does not work with a field which contain JSON string
+		// so we need to by pass it by converting " => ' in ToJSON and recover it in FromJSON
+		{Key: "metadata", CustomParser: func(node *ujson.JSONASTNode) {
+			metadata := strings.Replace(node.Value, `"`, ``, -1)
+			post.metadata = strings.Replace(metadata, "'", `"`, -1)
+		}},
 		{Key: "reactions", CustomParser: func(node *ujson.JSONASTNode) {
 			reactions := avl.NewTree()
 			for _, child := range node.ObjectChildren {
@@ -186,12 +169,18 @@ func (post *Post) ToJSON() string {
 	})
 	reactions := ujson.FormatObject(reactionsKV)
 
+	// NOTE: The parser use " to detect token in JSON format so it does not work with a field which contain JSON string
+	// so we need to by pass it by converting " => ' in ToJSON and recover it in FromJSON
+	// Delete all ' to ensure than when we re-convert back from ' => " it will not break the JSON string
+	metadata := strings.Replace(post.metadata, `'`, ``, -1)
+	metadata = strings.Replace(metadata, `"`, `'`, -1)
+
 	postJSON := ujson.FormatObject([]ujson.FormatKV{
-		{Key: "id", Value: post.id},
-		{Key: "parentID", Value: post.parentID},
-		{Key: "feedID", Value: post.feedID},
+		{Key: "id", Value: uint64(post.id)},
+		{Key: "parentID", Value: uint64(post.parentID)},
+		{Key: "feedID", Value: uint64(post.feedID)},
 		{Key: "category", Value: post.category},
-		{Key: "metadata", Value: post.metadata},
+		{Key: "metadata", Value: metadata},
 		{Key: "reactions", Value: reactions, Raw: true},
 		{Key: "creator", Value: post.creator},
 		{Key: "tipAmount", Value: post.tipAmount},

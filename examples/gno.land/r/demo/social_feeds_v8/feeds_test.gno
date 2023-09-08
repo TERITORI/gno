@@ -2,15 +2,17 @@ package social_feeds
 
 import (
 	"encoding/base64"
+	"fmt"
 	"std"
 	"strconv"
 	"strings"
 	"testing"
 
 	"gno.land/p/demo/avl"
-	"gno.land/p/demo/binutils"
 	"gno.land/p/demo/testutils"
+	"gno.land/p/demo/ujson"
 	"gno.land/r/demo/boards"
+	feedsV7 "gno.land/r/demo/social_feeds_v7"
 	"gno.land/r/demo/users"
 )
 
@@ -189,18 +191,19 @@ func testCreateAndDeleteComment(t *testing.T) {
 
 	// Get comments
 	comments := GetComments(feed1.id, post1.id, 0, 10)
-	commentsSplitted := strings.Split(comments, ",")
+	commentsParsed := ujson.ParseSlice(comments)
 
-	if len(commentsSplitted) != 2 {
-		t.Fatalf("expected encoded comments: 2, got %q.", commentsSplitted)
+	if len(commentsParsed) != 2 {
+		t.Fatalf("expected encoded comments: 2, got %q.", commentsParsed)
 	}
 
 	// Delete 1 comment
 	DeletePost(feed1.id, comment2.id)
 	comments = GetComments(feed1.id, post1.id, 0, 10)
-	commentsSplitted = strings.Split(comments, ",")
-	if len(commentsSplitted) != 1 {
-		t.Fatalf("expected encoded comments: 1, got %q.", commentsSplitted)
+	commentsParsed = ujson.ParseSlice(comments)
+
+	if len(commentsParsed) != 1 {
+		t.Fatalf("expected encoded comments: 1, got %q.", commentsParsed)
 	}
 }
 
@@ -208,11 +211,12 @@ func countPosts(feedID FeedID, categories []uint64, limit uint8) int {
 	offset := uint64(0)
 
 	postsStr := GetPosts(feedID, 0, "", categories, offset, limit)
-	if postsStr == "" {
+	if postsStr == "[]" {
 		return 0
 	}
 
-	postsCount := len(strings.Split(postsStr, ","))
+	parsedPosts := ujson.ParseSlice(postsStr)
+	postsCount := len(parsedPosts)
 	return postsCount
 }
 
@@ -221,11 +225,12 @@ func countPostsByUser(feedID FeedID, user string) int {
 	limit := uint8(10)
 
 	postsStr := GetPosts(feedID, 0, user, []uint64{}, offset, limit)
-	if postsStr == "" {
+	if postsStr == "[]" {
 		return 0
 	}
 
-	postsCount := len(strings.Split(postsStr, ","))
+	parsedPosts := ujson.ParseSlice(postsStr)
+	postsCount := len(parsedPosts)
 	return postsCount
 }
 
@@ -374,7 +379,8 @@ func testFlagPost(t *testing.T) {
 	FlagPost(feed9.id, pid)
 
 	flaggedPostsStr := GetFlaggedPosts(feed9.id, 0, 10)
-	if flaggedPostsCount := len(strings.Split(flaggedPostsStr, ",")); flaggedPostsCount != 1 {
+	parsed := ujson.ParseSlice(flaggedPostsStr)
+	if flaggedPostsCount := len(parsed); flaggedPostsCount != 1 {
 		t.Fatalf("expected flagged posts: 1, got %d.", flaggedPostsCount)
 	}
 }
@@ -389,12 +395,12 @@ func testFilterUser(t *testing.T) {
 	feedID4 := CreateFeed("teritori4")
 	feed4 := mustGetFeed(feedID4)
 
-	CreatePost(feed4.id, rootPostID, cat1, "metadata1")
-	CreatePost(feed4.id, rootPostID, cat1, "metadata2")
+	CreatePost(feed4.id, rootPostID, cat1, `{"metadata": "value"}`)
+	CreatePost(feed4.id, rootPostID, cat1, `{"metadata2": "value"}`)
 
 	// User2 create 1 post
 	std.TestSetOrigCaller(user2)
-	CreatePost(feed4.id, rootPostID, cat1, "metadata3")
+	CreatePost(feed4.id, rootPostID, cat1, `{"metadata": "value"}`)
 
 	if count := countPostsByUser(feed4.id, user1.String()); count != 2 {
 		t.Fatalf("expected total posts by user1: 2, got %d.", count)
@@ -416,8 +422,8 @@ func testHidePostForMe(t *testing.T) {
 	feedID8 := CreateFeed("teritor8")
 	feed8 := mustGetFeed(feedID8)
 
-	postIDToHide := CreatePost(feed8.id, rootPostID, cat1, "metadata1")
-	postID := CreatePost(feed8.id, rootPostID, cat1, "metadata1")
+	postIDToHide := CreatePost(feed8.id, rootPostID, cat1, `{"metadata": "value"}`)
+	postID := CreatePost(feed8.id, rootPostID, cat1, `{"metadata": "value"}`)
 
 	if count := countPosts(feed8.id, filter_all, 10); count != 2 {
 		t.Fatalf("expected posts count: 2, got %q.", count)
@@ -448,28 +454,30 @@ func testHidePostForMe(t *testing.T) {
 }
 
 func testMigrateFeedData(t *testing.T) string {
-	feedID := CreateFeed("teritor11")
+	feedID := feedsV7.CreateFeed("teritor11")
 
 	// Post to test
-	postID := CreatePost(feedID, rootPostID, cat1, "metadata2")
-	ReactPost(feedID, postID, "🇬🇸", true)
+	postID := feedsV7.CreatePost(feedID, feedsV7.PostID(0), 2, `{"metadata": "value"}`)
+	feedsV7.ReactPost(feedID, postID, "🇬🇸", true)
 
 	// Add comment to post
-	commentID := CreatePost(feedID, postID, cat1, "comment1")
-	ReactPost(feedID, commentID, "🇬🇸", true)
+	commentID := feedsV7.CreatePost(feedID, postID, 2, `{"comment1": "value"}`)
+	feedsV7.ReactPost(feedID, commentID, "🇬🇸", true)
 
 	// // Post with json metadata
-	// CreatePost(feedID, rootPostID, cat1, `{"a":1}`)
+	feedsV7.CreatePost(feedID, feedsV7.PostID(0), 2, `{'a':1}`)
 
 	// Expect: should convert feed data to JSON successfully without error
-	dataJSON := ExportFeedData(feedID)
-
+	dataJSON := feedsV7.ExportFeedData(feedID)
 	if dataJSON == "" {
 		t.Fatalf("expected feed data exported successfully")
 	}
 
 	// Import data =====================================
-	ImportFeedData(feedID, dataJSON)
+	ImportFeedData(FeedID(uint64(feedID)), dataJSON)
+
+	// Test public func
+	MigrateFromPreviousFeed(feedID)
 }
 
 func Test(t *testing.T) {

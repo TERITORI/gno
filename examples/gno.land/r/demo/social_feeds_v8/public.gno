@@ -134,15 +134,15 @@ func GetFlaggedPosts(fid FeedID, offset uint64, limit uint8) string {
 
 	SEPARATOR := ","
 	res := strings.Join(postList, SEPARATOR)
-	return res
+	return ufmt.Sprintf("[%s]", res)
 }
 
 // NOTE: due to bug of std.PrevRealm().Addr() return "" when query so we user this proxy function temporary
 // in waiting of correct behaviour of std.PrevRealm().Addr()
 func GetPosts(fid FeedID, parentID PostID, user string, categories []uint64, offset uint64, limit uint8) string {
 	caller := std.PrevRealm().Addr()
-
-	return GetPostsWithCaller(fid, parentID, caller.String(), user, categories, offset, limit)
+	data := GetPostsWithCaller(fid, parentID, caller.String(), user, categories, offset, limit)
+	return data
 }
 
 func GetPostsWithCaller(fid FeedID, parentID PostID, callerAddrStr string, user string, categories []uint64, offset uint64, limit uint8) string {
@@ -164,7 +164,7 @@ func GetPostsWithCaller(fid FeedID, parentID PostID, callerAddrStr string, user 
 	}
 
 	res := strings.Join(postListStr, SEPARATOR)
-	return res
+	return ufmt.Sprintf("[%s]", res)
 }
 
 // user here is: filter by user
@@ -309,6 +309,5 @@ func ImportFeedData(fid FeedID, jsonData string) string {
 func MigrateFromPreviousFeed(fid feedsV7.FeedID) {
 	// Get exported data from previous feeds
 	jsonData := feedsV7.ExportFeedData(fid)
-
-	ImportFeedData(FeedID(fid.String()), jsonData)
+	ImportFeedData(FeedID(uint64(fid)), jsonData)
 }

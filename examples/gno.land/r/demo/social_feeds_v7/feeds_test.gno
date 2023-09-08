@@ -174,7 +174,7 @@ func testCreateAndDeleteComment(t *testing.T) {
 	feed1 := getFeed1()
 	post1 := getPost1()
 
-	metadata := `empty_meta_data`
+	metadata := `{"data":"empty_meta_data"}`
 
 	commentID1 := CreatePost(feed1.id, post1.id, cat1, metadata)
 	commentID2 := CreatePost(feed1.id, post1.id, cat1, metadata)
@@ -456,19 +456,18 @@ func testMigrateFeedData(t *testing.T) string {
 	feedID := CreateFeed("teritor11")
 
 	// Post to test
-	postID := CreatePost(feedID, rootPostID, cat1, "metadata2")
+	postID := CreatePost(feedID, rootPostID, cat1, `{"b":"c"}`)
 	ReactPost(feedID, postID, "🇬🇸", true)
 
 	// Add comment to post
-	commentID := CreatePost(feedID, postID, cat1, "comment1")
+	commentID := CreatePost(feedID, postID, cat1, `{"comment":2}`)
 	ReactPost(feedID, commentID, "🇬🇸", true)
 
-	// // Post with json metadata
-	// CreatePost(feedID, rootPostID, cat1, `{"a":1}`)
+	// Post with json metadata
+	CreatePost(feedID, rootPostID, cat1, `{"a":1}`)
 
 	// Expect: should convert feed data to JSON successfully without error
 	dataJSON := ExportFeedData(feedID)
-
 	if dataJSON == "" {
 		t.Fatalf("expected feed data exported successfully")
 	}

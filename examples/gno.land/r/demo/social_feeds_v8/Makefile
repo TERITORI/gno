@@ -146,4 +146,3 @@ upgrade_pkg:
         -pkgdir="." \
         -pkgpath="gno.land/p/demo/daodao/core_v6" \
         test1
-    
