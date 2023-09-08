@@ -92,7 +92,7 @@ func testGetPosts(t *testing.T) {
 	var postIDsStr string
 
 	// Query last 3 posts
-	posts = getPosts(feed, "", "", []uint64{}, 0, 3)
+	posts = getPosts(feed, 0, "", "", []uint64{}, 0, 3)
 	postIDsStr = toPostIDsStr(posts)
 
 	if postIDsStr != "8,7,6" {
@@ -100,7 +100,7 @@ func testGetPosts(t *testing.T) {
 	}
 
 	// Query page 2
-	posts = getPosts(feed, "", "", []uint64{}, 3, 3)
+	posts = getPosts(feed, 0, "", "", []uint64{}, 3, 3)
 	postIDsStr = toPostIDsStr(posts)
 	if postIDsStr != "5,4,3" {
 		t.Fatalf("expected posts order: 5,4,3. Got: %s", postIDsStr)
@@ -109,7 +109,7 @@ func testGetPosts(t *testing.T) {
 	// Exclude hidden post
 	HidePostForMe(feed.id, postIDToHide)
 
-	posts = getPosts(feed, user.String(), "", []uint64{}, 0, 3)
+	posts = getPosts(feed, 0, user.String(), "", []uint64{}, 0, 3)
 	postIDsStr = toPostIDsStr(posts)
 
 	if postIDsStr != "8,6,5" {
@@ -119,7 +119,7 @@ func testGetPosts(t *testing.T) {
 	// Exclude flagged post
 	FlagPost(feed.id, postIDToFlagged)
 
-	posts = getPosts(feed, user.String(), "", []uint64{}, 0, 3)
+	posts = getPosts(feed, 0, user.String(), "", []uint64{}, 0, 3)
 	postIDsStr = toPostIDsStr(posts)
 
 	if postIDsStr != "8,5,4" {
@@ -127,7 +127,7 @@ func testGetPosts(t *testing.T) {
 	}
 
 	// Pagination with hidden/flagged posts
-	posts = getPosts(feed, user.String(), "", []uint64{}, 3, 3)
+	posts = getPosts(feed, 0, user.String(), "", []uint64{}, 3, 3)
 	postIDsStr = toPostIDsStr(posts)
 
 	if postIDsStr != "3,2,1" {
@@ -135,7 +135,7 @@ func testGetPosts(t *testing.T) {
 	}
 
 	// Query out of range
-	posts = getPosts(feed, user.String(), "", []uint64{}, 6, 3)
+	posts = getPosts(feed, 0, user.String(), "", []uint64{}, 6, 3)
 	postIDsStr = toPostIDsStr(posts)
 
 	if postIDsStr != "" {
@@ -187,13 +187,8 @@ func testCreateAndDeleteComment(t *testing.T) {
 		t.Fatalf("expected comment parentID: %q, got %q.", post1.id, comment2.parentID)
 	}
 
-	// Check comments size
-	if post1.comments.Size() != 2 {
-		t.Fatalf("expected comments count: 2, got %q.", post1.comments.Size())
-	}
-
 	// Get comments
-	comments := GetComments(feed1.id, post1.id)
+	comments := GetComments(feed1.id, post1.id, 0, 10)
 	commentsSplitted := strings.Split(comments, ",")
 
 	if len(commentsSplitted) != 2 {
@@ -202,7 +197,7 @@ func testCreateAndDeleteComment(t *testing.T) {
 
 	// Delete 1 comment
 	DeletePost(feed1.id, comment2.id)
-	comments = GetComments(feed1.id, post1.id)
+	comments = GetComments(feed1.id, post1.id, 0, 10)
 	commentsSplitted = strings.Split(comments, ",")
 	if len(commentsSplitted) != 1 {
 		t.Fatalf("expected encoded comments: 1, got %q.", commentsSplitted)
@@ -212,7 +207,7 @@ func testCreateAndDeleteComment(t *testing.T) {
 func countPosts(feedID FeedID, categories []uint64, limit uint8) int {
 	offset := uint64(0)
 
-	postsStr := GetPosts(feedID, "", categories, offset, limit)
+	postsStr := GetPosts(feedID, 0, "", categories, offset, limit)
 	if postsStr == "" {
 		return 0
 	}
@@ -225,7 +220,7 @@ func countPostsByUser(feedID FeedID, user string) int {
 	offset := uint64(0)
 	limit := uint8(10)
 
-	postsStr := GetPosts(feedID, user, []uint64{}, offset, limit)
+	postsStr := GetPosts(feedID, 0, user, []uint64{}, offset, limit)
 	if postsStr == "" {
 		return 0
 	}
@@ -414,71 +409,6 @@ func testFilterUser(t *testing.T) {
 	}
 }
 
-func testMigrate(t *testing.T) {
-	feedID7 := CreateFeed("teritori7")
-	feed7 := mustGetFeed(feedID7)
-
-	// Create Posts
-	CreatePost(feed7.id, rootPostID, cat1, "metadata1")
-	postID := CreatePost(feed7.id, rootPostID, cat1, "metadata2")
-	postFrom7 := feed7.MustGetPost(postID)
-
-	// Creat Comments
-	CreatePost(feed7.id, postID, cat1, "metadata3")
-	CreatePost(feed7.id, postID, cat1, "metadata4")
-	CreatePost(feed7.id, postID, cat1, "metadata4")
-
-	// React Posts
-	ReactPost(feed7.id, postID, "🥰", true)
-
-	// Tip Posts
-	// NOTE: Dont know why the address should be this to be able to call banker (= std.GetCallerAt(1))
-	tipper := std.Address("g17rgsdnfxzza0sdfsdma37sdwxagsz378833ca4")
-	std.TestSetOrigCaller(tipper)
-	std.TestSetOrigSend(std.Coins{{"ugnot", 1_000_000}}, nil)
-	TipPost(feed7.id, postID)
-
-	// Clone to Feed2
-	feed8 := &Feed{id: 8}
-	feed8.MigrateFrom(feed7)
-	feed8.name = "NewFeed"
-
-	// Total posts
-	if feed8.posts.Size() != 5 {
-		t.Fatalf("total posts must be 5")
-	}
-
-	// Total posts from root
-	if count := countPosts(feed8.id, []uint64{}, 10); count != 2 {
-		t.Fatalf("total root posts must be 2")
-	}
-
-	post := feed8.MustGetPost(postID)
-	if post.tipAmount != 1_000_000 {
-		t.Fatalf("tip must be 1_000_000")
-	}
-
-	if post.comments.Size() != 3 {
-		t.Fatalf("total comments must be 3")
-	}
-
-	if post.reactions.Size() != 1 {
-		t.Fatalf("total reactions must be 1")
-	}
-
-	if postFrom7.createdAt != post.createdAt {
-		t.Fatalf("createdAt should be the same")
-	}
-
-	if postFrom7.creator != post.creator {
-		t.Fatalf("creator should be the same")
-	}
-
-	if feed8.postsCtr != 5 {
-		t.Fatalf("postsCtr must be 5, get %d", feed8.postsCtr)
-	}
-}
-
 func testHidePostForMe(t *testing.T) {
 	user := std.Address("user")
 	std.TestSetOrigCaller(user)
@@ -564,7 +494,4 @@ func Test(t *testing.T) {
 	testHidePostForMe(t)
 
 	testMigrateFeedData(t)
-
-	// TODO: complete migration when having time
-	// testMigrate(t)
 }

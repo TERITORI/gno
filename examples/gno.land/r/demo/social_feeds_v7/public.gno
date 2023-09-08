@@ -86,11 +86,7 @@ func BanPost(fid FeedID, pid PostID, reason string) {
 		panic("you are owner of the feed")
 	}
 
-	if post.parentID == 0 {
-		feed.BanPost(pid)
-	} else {
-		post.BanComment(pid)
-	}
+	feed.BanPost(pid)
 
 	feed.flags.ClearFlagCount(getFlagID(fid, pid))
 }
@@ -142,13 +138,13 @@ func GetFlaggedPosts(fid FeedID, offset uint64, limit uint8) string {
 
 // NOTE: due to bug of std.PrevRealm().Addr() return "" when query so we user this proxy function temporary
 // in waiting of correct behaviour of std.PrevRealm().Addr()
-func GetPosts(fid FeedID, user string, categories []uint64, offset uint64, limit uint8) string {
+func GetPosts(fid FeedID, parentID PostID, user string, categories []uint64, offset uint64, limit uint8) string {
 	caller := std.PrevRealm().Addr()
 
-	return GetPostsWithCaller(fid, caller.String(), user, categories, offset, limit)
+	return GetPostsWithCaller(fid, parentID, caller.String(), user, categories, offset, limit)
 }
 
-func GetPostsWithCaller(fid FeedID, callerAddrStr string, user string, categories []uint64, offset uint64, limit uint8) string {
+func GetPostsWithCaller(fid FeedID, parentID PostID, callerAddrStr string, user string, categories []uint64, offset uint64, limit uint8) string {
 	// Return flagged posts, we process flagged posts differently using FlagIndex
 	if len(categories) == 1 && categories[0] == uint64(9) {
 		return GetFlaggedPosts(fid, offset, limit)
@@ -157,7 +153,7 @@ func GetPostsWithCaller(fid FeedID, callerAddrStr string, user string, categorie
 	// BUG: normally std.PrevRealm().Addr() should return a value instead of empty
 	// Fix is in progress on Gno side
 	feed := mustGetFeed(fid)
-	posts := getPosts(feed, callerAddrStr, user, categories, offset, limit)
+	posts := getPosts(feed, parentID, callerAddrStr, user, categories, offset, limit)
 
 	SEPARATOR := ","
 	var postListStr []string
@@ -171,7 +167,7 @@ func GetPostsWithCaller(fid FeedID, callerAddrStr string, user string, categorie
 }
 
 // user here is: filter by user
-func getPosts(feed *Feed, callerAddrStr string, user string, categories []uint64, offset uint64, limit uint8) []*Post {
+func getPosts(feed *Feed, parentID PostID, callerAddrStr string, user string, categories []uint64, offset uint64, limit uint8) []*Post {
 	caller := std.Address(callerAddrStr)
 
 	var posts []*Post
@@ -190,7 +186,7 @@ func getPosts(feed *Feed, callerAddrStr string, user string, categories []uint64
 		postCatStr := strconv.FormatUint(post.category, 10)
 
 		// NOTE: this search mechanism is not efficient, only for demo purpose
-		if post.parentID == uint64(0) && post.deleted == false {
+		if post.parentID == parentID && post.deleted == false {
 			if requestedCategories.Size() > 0 && !requestedCategories.Has(postCatStr) {
 				return false
 			}
@@ -234,26 +230,8 @@ func getPosts(feed *Feed, callerAddrStr string, user string, categories []uint64
 }
 
 // Get comments list
-// NOTE: Does not support limit/offset for now, just return all the comments
-func GetComments(fid FeedID, pid PostID) string {
-	caller := std.PrevRealm().Addr()
-	feed := mustGetFeed(fid)
-	post := feed.MustGetPost(pid)
-
-	var subpostList []string
-	post.comments.Iterate("", "", func(key string, value interface{}) bool {
-		subpost := value.(*Post)
-
-		if subpost.parentID == pid && subpost.deleted == false {
-			subpostList = append(subpostList, subpost.String())
-		}
-
-		return false
-	})
-
-	SEPARATOR := ","
-	res := strings.Join(subpostList, SEPARATOR)
-	return res
+func GetComments(fid FeedID, parentID PostID, offset uint64, limit uint8) string {
+	return GetPosts(fid, parentID, "", []uint64{}, offset, limit)
 }
 
 // Get Post
@@ -328,3 +306,10 @@ func ImportFeedData(fid FeedID, jsonData string) string {
 	ast := ujson.JSONASTNode{}
 	feed.FromJSON(jsonData)
 }
+
+// func MigrateFromPreviousFeed(fid feedsV7.FeedID) {
+// 	// Get exported data from previous feeds
+// 	jsonData := feedsV7.ExportFeedData(fid)
+
+// 	ImportFeedData(FeedID(fid.String()), jsonData)
+// }

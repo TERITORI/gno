@@ -89,22 +89,6 @@ func (post *Post) Bytes() []byte {
 	reactionsStr := strings.Join(reactionsArr, SEPARATOR)
 	b = append(b, EncodeLengthPrefixedStringUint32BE(reactionsStr)...)
 
-	// Encode comments ids
-	var subpostIDArr []string
-	post.comments.Iterate("", "", func(key string, value interface{}) bool {
-		subpostID := key
-		subpost := value.(*Post)
-
-		if subpost.parentID == post.id {
-			subpostIDArr = append(subpostIDArr, ufmt.Sprintf("%d", uint64(subpost.id)))
-		}
-
-		return false
-	})
-
-	subpostIDsStr := strings.Join(subpostIDArr, SEPARATOR)
-	b = append(b, EncodeLengthPrefixedStringUint32BE(subpostIDsStr)...)
-
 	// Add tipAmount
 	b = binary.BigEndian.AppendUint64(b, post.tipAmount)
 
@@ -124,21 +108,6 @@ func (post *Post) Update(category uint64, metadata string) {
 func (post *Post) Delete() {
 	post.deleted = true
 	post.deletedAt = time.Now()
-}
-
-func (post *Post) BanComment(pid PostID) {
-	if post.id == pid {
-		panic("should not happen")
-	}
-
-	pidkey := postIDKey(pid)
-	postI, removed := post.comments.Remove(pidkey)
-	if !removed {
-		panic("comment not found in post")
-	}
-
-	comment := postI.(*Post)
-	post.comments.Remove(pidkey)
 }
 
 func (post *Post) Tip(from std.Address, to std.Address) {
@@ -198,17 +167,6 @@ func (post *Post) FromJSON(jsonData string) {
 			}
 			post.reactions = *reactions
 		}},
-		{Key: "comments", CustomParser: func(node *ujson.JSONASTNode) {
-			comments := avl.NewTree()
-			for _, child := range node.ObjectChildren {
-				commentNode := child.Value
-
-				comment := Post{}
-				comment.FromJSON(commentNode.String())
-				comments.Set(child.Key, &comment)
-			}
-			post.comments = *comments
-		}},
 		{Key: "creator", Value: &post.creator},
 		{Key: "tipAmount", Value: &post.tipAmount},
 		{Key: "deleted", Value: &post.deleted},
@@ -219,15 +177,6 @@ func (post *Post) FromJSON(jsonData string) {
 }
 
 func (post *Post) ToJSON() string {
-	comments := []ujson.FormatKV{}
-	post.comments.Iterate("", "", func(key string, value interface{}) bool {
-		comments = append(comments, ujson.FormatKV{
-			Key:   key,
-			Value: value.(*Post),
-		})
-		return false
-	})
-
 	reactionsKV := []ujson.FormatKV{}
 	post.reactions.Iterate("", "", func(key string, value interface{}) bool {
 		count := value.(int)
@@ -244,7 +193,6 @@ func (post *Post) ToJSON() string {
 		{Key: "category", Value: post.category},
 		{Key: "metadata", Value: post.metadata},
 		{Key: "reactions", Value: reactions, Raw: true},
-		{Key: "comments", Value: ujson.FormatObject(comments), Raw: true},
 		{Key: "creator", Value: post.creator},
 		{Key: "tipAmount", Value: post.tipAmount},
 		{Key: "deleted", Value: post.deleted},

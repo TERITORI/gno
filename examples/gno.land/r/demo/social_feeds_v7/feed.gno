@@ -84,10 +84,6 @@ func (feed *Feed) AddPost(creator std.Address, parentID PostID, category uint64,
 	post := newPost(feed, pid, creator, parentID, category, metadata)
 	feed.posts.Set(pidkey, post)
 
-	if parentID != 0 {
-		parent := feed.MustGetPost(parentID)
-		parent.comments.Set(pidkey, post)
-	}
 	return post
 }
 
@@ -161,7 +157,6 @@ func (feed *Feed) Render() string {
 			str += " * [" +
 				"PostID: " + post.id.String() +
 				" - " + intToString(post.reactions.Size()) + " reactions " +
-				" - " + intToString(post.comments.Size()) + " comments" +
 				" - " + ufmt.Sprintf("%d", post.tipAmount) + " tip amount" +
 				"]" +
 				"(" + postUrl + ")" +
