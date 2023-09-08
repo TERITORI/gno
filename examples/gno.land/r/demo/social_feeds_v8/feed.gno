@@ -9,6 +9,7 @@ import (
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/flags_index"
 	"gno.land/p/demo/ufmt"
+	"gno.land/p/demo/ujson"
 )
 
 type FeedID uint64
@@ -25,7 +26,6 @@ type Feed struct {
 	owner     std.Address
 	posts     avl.Tree // pidkey -> *Post
 	createdAt time.Time
-	deleted   avl.Tree
 
 	flags             *flags_index.FlagsIndex
 	hiddenPostsByUser avl.Tree // std.Address => *avl.Tree (postID => bool)
@@ -50,7 +50,6 @@ func newFeed(fid FeedID, url string, name string, creator std.Address) *Feed {
 		owner:     creator,
 		posts:     avl.Tree{},
 		createdAt: time.Now(),
-		deleted:   avl.Tree{},
 		flags:     flags_index.NewFlagsIndex(),
 		postsCtr:  0,
 	}
@@ -194,29 +193,52 @@ func (feed *Feed) Render() string {
 	return str
 }
 
-func (feed *Feed) MigrateFrom(srcFeed *Feed) {
-	if feed.id == FeedID(0) {
-		feed.id = srcFeed.id
-	}
-	feed.url = srcFeed.url
-	feed.name = srcFeed.name
-	feed.creator = srcFeed.creator
-	feed.owner = srcFeed.owner
-	feed.createdAt = srcFeed.createdAt
-
-	srcFeed.posts.Iterate("", "", func(postKey string, value interface{}) bool {
-		post := value.(*Post)
-		targetPost := &Post{}
-		targetPost.MigrateFrom(post)
-
-		feed.posts.Set(postKey, targetPost)
+func (feed *Feed) ToJSON() string {
+	posts := []ujson.FormatKV{}
+	feed.posts.Iterate("", "", func(key string, value interface{}) bool {
+		posts = append(posts, ujson.FormatKV{
+			Key:   key,
+			Value: value.(*Post),
+		})
 		return false
 	})
 
-	gFeedsCtr += 1
-	fidkey := feedIDKey(feed.id)
-	gFeeds.Set(fidkey, feed)
-	gFeedsByName.Set(feed.name, feed)
+	feedJSON := ujson.FormatObject([]ujson.FormatKV{
+		{Key: "id", Value: feed.id},
+		{Key: "url", Value: feed.url},
+		{Key: "name", Value: feed.name},
+		{Key: "creator", Value: feed.creator},
+		{Key: "owner", Value: feed.owner},
+		{Key: "posts", Value: ujson.FormatObject(posts), Raw: true},
+		{Key: "createdAt", Value: feed.createdAt},
+		{Key: "postsCtr", Value: feed.postsCtr},
+		// TODO: convert flags, hiddenPostsByUser
+		// {Key: "flags", Value: feed.flags},
+		// {Key: "hiddenPostsByUser", Value: feed.hiddenPostsByUser},
+	})
+	return feedJSON
+}
 
-	feed.postsCtr = srcFeed.postsCtr
+func (feed *Feed) FromJSON(jsonData string) {
+	ast := ujson.TokenizeAndParse(jsonData)
+	ast.ParseObject([]*ujson.ParseKV{
+		{Key: "id", Value: &feed.id},
+		{Key: "url", Value: &feed.url},
+		{Key: "name", Value: &feed.name},
+		{Key: "creator", Value: &feed.creator},
+		{Key: "owner", Value: &feed.owner},
+		{Key: "posts", CustomParser: func(node *ujson.JSONASTNode) {
+			posts := avl.NewTree()
+			for _, child := range node.ObjectChildren {
+				postNode := child.Value
+
+				post := Post{}
+				post.FromJSON(postNode.String())
+				posts.Set(child.Key, &post)
+			}
+			feed.posts = *posts
+		}},
+		{Key: "createdAt", Value: &feed.createdAt},
+		{Key: "postsCtr", Value: &feed.postsCtr},
+	})
 }

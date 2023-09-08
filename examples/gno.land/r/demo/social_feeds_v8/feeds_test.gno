@@ -2,7 +2,6 @@ package social_feeds
 
 import (
 	"encoding/base64"
-	"fmt"
 	"std"
 	"strconv"
 	"strings"
@@ -518,6 +517,31 @@ func testHidePostForMe(t *testing.T) {
 	}
 }
 
+func testMigrateFeedData(t *testing.T) string {
+	feedID := CreateFeed("teritor11")
+
+	// Post to test
+	postID := CreatePost(feedID, rootPostID, cat1, "metadata2")
+	ReactPost(feedID, postID, "🇬🇸", true)
+
+	// Add comment to post
+	commentID := CreatePost(feedID, postID, cat1, "comment1")
+	ReactPost(feedID, commentID, "🇬🇸", true)
+
+	// // Post with json metadata
+	// CreatePost(feedID, rootPostID, cat1, `{"a":1}`)
+
+	// Expect: should convert feed data to JSON successfully without error
+	dataJSON := ExportFeedData(feedID)
+
+	if dataJSON == "" {
+		t.Fatalf("expected feed data exported successfully")
+	}
+
+	// Import data =====================================
+	ImportFeedData(feedID, dataJSON)
+}
+
 func Test(t *testing.T) {
 	testCreateFeed(t)
 
@@ -538,6 +562,8 @@ func Test(t *testing.T) {
 	testFlagPost(t)
 
 	testHidePostForMe(t)
+
+	testMigrateFeedData(t)
 
 	// TODO: complete migration when having time
 	// testMigrate(t)

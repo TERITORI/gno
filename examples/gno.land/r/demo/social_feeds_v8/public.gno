@@ -9,6 +9,8 @@ import (
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/flags_index"
 	"gno.land/p/demo/ufmt"
+	"gno.land/p/demo/ujson"
+	feedsV7 "gno.land/r/demo/social_feeds_v7"
 )
 
 // Only registered user can create a new feed
@@ -313,10 +315,24 @@ func GetFeedByID(fid FeedID) *Feed {
 	return mustGetFeed(fid)
 }
 
-func MigrateFromPreviousFeed() {
-	feed := &Feed{}
+// TODO: allow only admin to call
+func ExportFeedData(fid FeedID) string {
+	feed := mustGetFeed(fid)
+	feedJSON := feed.ToJSON()
+	return feedJSON
+}
 
-	// fid := social_feeds.FeedID(1)
-	// srcFeed := social_feeds.GetFeedByID(fid)
-	// feed.MigrateFrom(srcFeed.(*Feed))
+// TODO: allow only admin to call
+func ImportFeedData(fid FeedID, jsonData string) string {
+	feed := mustGetFeed(fid)
+
+	ast := ujson.JSONASTNode{}
+	feed.FromJSON(jsonData)
+}
+
+func MigrateFromPreviousFeed(fid feedsV7.FeedID) {
+	// Get exported data from previous feeds
+	jsonData := feedsV7.ExportFeedData(fid)
+
+	ImportFeedData(FeedID(fid.String()), jsonData)
 }

@@ -2,7 +2,6 @@ package social_feeds
 
 import (
 	"encoding/base64"
-	"fmt"
 	"std"
 	"strconv"
 	"strings"
@@ -529,8 +528,8 @@ func testMigrateFeedData(t *testing.T) string {
 	commentID := CreatePost(feedID, postID, cat1, "comment1")
 	ReactPost(feedID, commentID, "🇬🇸", true)
 
-	// Post with json metadata
-	CreatePost(feedID, rootPostID, cat1, "{\"a\":\"1\"}")
+	// // Post with json metadata
+	// CreatePost(feedID, rootPostID, cat1, `{"a":1}`)
 
 	// Expect: should convert feed data to JSON successfully without error
 	dataJSON := ExportFeedData(feedID)

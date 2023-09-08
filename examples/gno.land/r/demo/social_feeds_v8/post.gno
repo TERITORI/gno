@@ -11,6 +11,7 @@ import (
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/binutils"
 	"gno.land/p/demo/ufmt"
+	"gno.land/p/demo/ujson"
 )
 
 type PostID uint64
@@ -181,35 +182,75 @@ func (post *Post) Render() string {
 	return post.metadata
 }
 
-func (post *Post) MigrateFrom(srcPost *Post) {
-	// Copy post to new target
-	post.feedID = srcPost.feedID
-	post.id = srcPost.id
-	post.parentID = srcPost.parentID
-	post.category = srcPost.category
-	post.metadata = srcPost.metadata
-	post.creator = srcPost.creator
-	post.tipAmount = srcPost.tipAmount
-	post.deleted = srcPost.deleted
-	post.createdAt = srcPost.createdAt
-	post.updatedAt = srcPost.updatedAt
-	post.deletedAt = srcPost.deletedAt
+func (post *Post) FromJSON(jsonData string) {
+	ast := ujson.TokenizeAndParse(jsonData)
+	ast.ParseObject([]*ujson.ParseKV{
+		{Key: "id", Value: &post.id},
+		{Key: "parentID", Value: &post.parentID},
+		{Key: "feedID", Value: &post.feedID},
+		{Key: "category", Value: &post.category},
+		{Key: "metadata", Value: &post.metadata},
+		{Key: "reactions", CustomParser: func(node *ujson.JSONASTNode) {
+			reactions := avl.NewTree()
+			for _, child := range node.ObjectChildren {
+				reactionCount := child.Value
+				reactions.Set(child.Key, reactionCount)
+			}
+			post.reactions = *reactions
+		}},
+		{Key: "comments", CustomParser: func(node *ujson.JSONASTNode) {
+			comments := avl.NewTree()
+			for _, child := range node.ObjectChildren {
+				commentNode := child.Value
 
-	// Copy reactions
-	srcPost.reactions.Iterate("", "", func(icon string, value interface{}) bool {
+				comment := Post{}
+				comment.FromJSON(commentNode.String())
+				comments.Set(child.Key, &comment)
+			}
+			post.comments = *comments
+		}},
+		{Key: "creator", Value: &post.creator},
+		{Key: "tipAmount", Value: &post.tipAmount},
+		{Key: "deleted", Value: &post.deleted},
+		{Key: "createdAt", Value: &post.createdAt},
+		{Key: "updatedAt", Value: &post.updatedAt},
+		{Key: "deletedAt", Value: &post.deletedAt},
+	})
+}
+
+func (post *Post) ToJSON() string {
+	comments := []ujson.FormatKV{}
+	post.comments.Iterate("", "", func(key string, value interface{}) bool {
+		comments = append(comments, ujson.FormatKV{
+			Key:   key,
+			Value: value.(*Post),
+		})
+		return false
+	})
+
+	reactionsKV := []ujson.FormatKV{}
+	post.reactions.Iterate("", "", func(key string, value interface{}) bool {
 		count := value.(int)
-		post.reactions.Set(icon, count)
+		data := ujson.FormatKV{Key: key, Value: count}
+		reactionsKV = append(reactionsKV, data)
 		return false
 	})
+	reactions := ujson.FormatObject(reactionsKV)
 
-	// Copy comments
-	srcPost.comments.Iterate("", "", func(pkey string, value interface{}) bool {
-		srcComment := value.(*Post)
-
-		targetComment := &Post{}
-		targetComment.MigrateFrom(srcComment)
-
-		post.comments.Set(pkey, targetComment)
-		return false
+	postJSON := ujson.FormatObject([]ujson.FormatKV{
+		{Key: "id", Value: post.id},
+		{Key: "parentID", Value: post.parentID},
+		{Key: "feedID", Value: post.feedID},
+		{Key: "category", Value: post.category},
+		{Key: "metadata", Value: post.metadata},
+		{Key: "reactions", Value: reactions, Raw: true},
+		{Key: "comments", Value: ujson.FormatObject(comments), Raw: true},
+		{Key: "creator", Value: post.creator},
+		{Key: "tipAmount", Value: post.tipAmount},
+		{Key: "deleted", Value: post.deleted},
+		{Key: "createdAt", Value: post.createdAt},
+		{Key: "updatedAt", Value: post.updatedAt},
+		{Key: "deletedAt", Value: post.deletedAt},
 	})
+	return postJSON
 }
