@@ -140,7 +140,7 @@ func (post *Post) FromJSON(jsonData string) {
 		// so we need to by pass it by converting " => ' in ToJSON and recover it in FromJSON
 		{Key: "metadata", CustomParser: func(node *ujson.JSONASTNode) {
 			metadata := strings.Replace(node.Value, `"`, ``, -1)
-			post.metadata = strings.Replace(metadata, "'", `"`, -1)
+			post.metadata = strings.Replace(metadata, "||", `"`, -1)
 		}},
 		{Key: "reactions", CustomParser: func(node *ujson.JSONASTNode) {
 			reactions := avl.NewTree()
@@ -172,8 +172,8 @@ func (post *Post) ToJSON() string {
 	// NOTE: The parser use " to detect token in JSON format so it does not work with a field which contain JSON string
 	// so we need to by pass it by converting " => ' in ToJSON and recover it in FromJSON
 	// Delete all ' to ensure than when we re-convert back from ' => " it will not break the JSON string
-	metadata := strings.Replace(post.metadata, `'`, ``, -1)
-	metadata = strings.Replace(metadata, `"`, `'`, -1)
+	metadata := strings.Replace(post.metadata, `||`, ``, -1)
+	metadata = strings.Replace(metadata, `"`, `||`, -1)
 
 	postJSON := ujson.FormatObject([]ujson.FormatKV{
 		{Key: "id", Value: uint64(post.id)},
