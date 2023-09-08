@@ -180,6 +180,7 @@ func ParseSlice(s string) []*JSONASTNode {
 		panic("empty json")
 	}
 	remainingTokens, ast := parseAST(tokens)
+
 	if len(remainingTokens) > 0 {
 		panic("invalid json")
 	}

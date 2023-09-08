@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"gno.land/p/demo/avl"
-	"gno.land/p/demo/binutils"
 	"gno.land/p/demo/ufmt"
 	"gno.land/p/demo/ujson"
 )
@@ -65,38 +64,8 @@ func newPost(feed *Feed, id PostID, creator std.Address, parentID PostID, catego
 	}
 }
 
-func (post *Post) Bytes() []byte {
-	b := []byte{}
-	b = binary.BigEndian.AppendUint64(b, uint64(post.id))
-	b = binary.BigEndian.AppendUint64(b, uint64(post.parentID))
-	b = binary.BigEndian.AppendUint64(b, uint64(post.feedID))
-	b = binary.BigEndian.AppendUint64(b, post.category)
-	b = append(b, EncodeLengthPrefixedStringUint32BE(post.metadata)...)
-	b = append(b, binutils.EncodeLengthPrefixedStringUint16BE(post.creator.String())...)
-	b = binary.BigEndian.AppendUint32(b, uint32(post.createdAt.Unix()))
-
-	// Encode reactions
-	var reactionsArr []string
-	post.reactions.Iterate("", "", func(key string, value interface{}) bool {
-		icon := key
-		count := value.(int)
-
-		reactionsArr = append(reactionsArr, ufmt.Sprintf("%s:%d", icon, count))
-		return false
-	})
-
-	SEPARATOR := ","
-	reactionsStr := strings.Join(reactionsArr, SEPARATOR)
-	b = append(b, EncodeLengthPrefixedStringUint32BE(reactionsStr)...)
-
-	// Add tipAmount
-	b = binary.BigEndian.AppendUint64(b, post.tipAmount)
-
-	return b
-}
-
 func (post *Post) String() string {
-	return bytesToString(post.Bytes())
+	return post.ToJSON()
 }
 
 func (post *Post) Update(category uint64, metadata string) {

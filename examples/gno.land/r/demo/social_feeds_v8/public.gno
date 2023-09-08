@@ -303,8 +303,6 @@ func ExportFeedData(fid FeedID) string {
 // TODO: allow only admin to call
 func ImportFeedData(fid FeedID, jsonData string) string {
 	feed := mustGetFeed(fid)
-
-	ast := ujson.JSONASTNode{}
 	feed.FromJSON(jsonData)
 }
 

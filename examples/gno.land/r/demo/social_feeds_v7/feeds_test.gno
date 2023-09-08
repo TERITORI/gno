@@ -2,14 +2,15 @@ package social_feeds
 
 import (
 	"encoding/base64"
+	"fmt"
 	"std"
 	"strconv"
 	"strings"
 	"testing"
 
 	"gno.land/p/demo/avl"
-	"gno.land/p/demo/binutils"
 	"gno.land/p/demo/testutils"
+	"gno.land/p/demo/ujson"
 	"gno.land/r/demo/boards"
 	"gno.land/r/demo/users"
 )
@@ -189,18 +190,19 @@ func testCreateAndDeleteComment(t *testing.T) {
 
 	// Get comments
 	comments := GetComments(feed1.id, post1.id, 0, 10)
-	commentsSplitted := strings.Split(comments, ",")
+	commentsParsed := ujson.ParseSlice(comments)
 
-	if len(commentsSplitted) != 2 {
-		t.Fatalf("expected encoded comments: 2, got %q.", commentsSplitted)
+	if len(commentsParsed) != 2 {
+		t.Fatalf("expected encoded comments: 2, got %q.", commentsParsed)
 	}
 
 	// Delete 1 comment
 	DeletePost(feed1.id, comment2.id)
 	comments = GetComments(feed1.id, post1.id, 0, 10)
-	commentsSplitted = strings.Split(comments, ",")
-	if len(commentsSplitted) != 1 {
-		t.Fatalf("expected encoded comments: 1, got %q.", commentsSplitted)
+	commentsParsed = ujson.ParseSlice(comments)
+
+	if len(commentsParsed) != 1 {
+		t.Fatalf("expected encoded comments: 1, got %q.", commentsParsed)
 	}
 }
 
@@ -208,11 +210,12 @@ func countPosts(feedID FeedID, categories []uint64, limit uint8) int {
 	offset := uint64(0)
 
 	postsStr := GetPosts(feedID, 0, "", categories, offset, limit)
-	if postsStr == "" {
+	if postsStr == "[]" {
 		return 0
 	}
 
-	postsCount := len(strings.Split(postsStr, ","))
+	parsedPosts := ujson.ParseSlice(postsStr)
+	postsCount := len(parsedPosts)
 	return postsCount
 }
 
@@ -221,11 +224,12 @@ func countPostsByUser(feedID FeedID, user string) int {
 	limit := uint8(10)
 
 	postsStr := GetPosts(feedID, 0, user, []uint64{}, offset, limit)
-	if postsStr == "" {
+	if postsStr == "[]" {
 		return 0
 	}
 
-	postsCount := len(strings.Split(postsStr, ","))
+	parsedPosts := ujson.ParseSlice(postsStr)
+	postsCount := len(parsedPosts)
 	return postsCount
 }
 
@@ -374,7 +378,8 @@ func testFlagPost(t *testing.T) {
 	FlagPost(feed9.id, pid)
 
 	flaggedPostsStr := GetFlaggedPosts(feed9.id, 0, 10)
-	if flaggedPostsCount := len(strings.Split(flaggedPostsStr, ",")); flaggedPostsCount != 1 {
+	parsed := ujson.ParseSlice(flaggedPostsStr)
+	if flaggedPostsCount := len(parsed); flaggedPostsCount != 1 {
 		t.Fatalf("expected flagged posts: 1, got %d.", flaggedPostsCount)
 	}
 }
