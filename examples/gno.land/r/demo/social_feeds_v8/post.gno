@@ -35,16 +35,17 @@ var Categories []string = []string{
 }
 
 type Post struct {
-	id        PostID
-	parentID  PostID
-	feedID    FeedID
-	category  uint64
-	metadata  string
-	reactions avl.Tree // icon -> count
-	comments  avl.Tree // Post.id -> *Post
-	creator   std.Address
-	tipAmount uint64
-	deleted   bool
+	id            PostID
+	parentID      PostID
+	feedID        FeedID
+	category      uint64
+	metadata      string
+	reactions     avl.Tree // icon -> count
+	comments      avl.Tree // Post.id -> *Post
+	creator       std.Address
+	tipAmount     uint64
+	deleted       bool
+	commentsCount uint64
 
 	createdAt int64
 	updatedAt int64
@@ -150,6 +151,7 @@ func (post *Post) FromJSON(jsonData string) {
 			}
 			post.reactions = *reactions
 		}},
+		{Key: "commentsCount", Value: &post.commentsCount},
 		{Key: "creator", Value: &post.creator},
 		{Key: "tipAmount", Value: &post.tipAmount},
 		{Key: "deleted", Value: &post.deleted},
@@ -185,6 +187,7 @@ func (post *Post) ToJSON() string {
 		{Key: "creator", Value: post.creator},
 		{Key: "tipAmount", Value: post.tipAmount},
 		{Key: "deleted", Value: post.deleted},
+		{Key: "commentsCount", Value: post.commentsCount},
 		{Key: "createdAt", Value: post.createdAt},
 		{Key: "updatedAt", Value: post.updatedAt},
 		{Key: "deletedAt", Value: post.deletedAt},

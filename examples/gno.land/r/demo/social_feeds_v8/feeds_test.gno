@@ -12,7 +12,8 @@ import (
 	"gno.land/p/demo/testutils"
 	"gno.land/p/demo/ujson"
 	"gno.land/r/demo/boards"
-	feedsV7 "gno.land/r/demo/social_feeds_v7"
+	// Fake previous version for testing
+	feedsV7 "gno.land/r/demo/social_feeds_v8"
 	"gno.land/r/demo/users"
 )
 
@@ -189,6 +190,11 @@ func testCreateAndDeleteComment(t *testing.T) {
 		t.Fatalf("expected comment parentID: %q, got %q.", post1.id, comment2.parentID)
 	}
 
+	// Check comment count on parent
+	if post1.commentsCount != 2 {
+		t.Fatalf("expected comments count: 2, got %d.", post1.commentsCount)
+	}
+
 	// Get comments
 	comments := GetComments(feed1.id, post1.id, 0, 10)
 	commentsParsed := ujson.ParseSlice(comments)
@@ -204,6 +210,11 @@ func testCreateAndDeleteComment(t *testing.T) {
 
 	if len(commentsParsed) != 1 {
 		t.Fatalf("expected encoded comments: 1, got %q.", commentsParsed)
+	}
+
+	// Check comment count on parent
+	if post1.commentsCount != 1 {
+		t.Fatalf("expected comments count: 1, got %d.", post1.commentsCount)
 	}
 }
 
@@ -477,7 +488,7 @@ func testMigrateFeedData(t *testing.T) string {
 	ImportFeedData(FeedID(uint64(feedID)), dataJSON)
 
 	// Test public func
-	MigrateFromPreviousFeed(feedID)
+	// MigrateFromPreviousFeed(feedID)
 }
 
 func Test(t *testing.T) {

@@ -84,6 +84,12 @@ func (feed *Feed) AddPost(creator std.Address, parentID PostID, category uint64,
 	post := newPost(feed, pid, creator, parentID, category, metadata)
 	feed.posts.Set(pidkey, post)
 
+	// If post is a comment then increase the comment count on parent
+	if uint64(parentID) != 0 {
+		parent := feed.MustGetPost(parentID)
+		parent.commentsCount += 1
+	}
+
 	return post
 }
 

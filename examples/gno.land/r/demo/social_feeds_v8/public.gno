@@ -10,7 +10,7 @@ import (
 	"gno.land/p/demo/flags_index"
 	"gno.land/p/demo/ufmt"
 	"gno.land/p/demo/ujson"
-	feedsV7 "gno.land/r/demo/social_feeds_v7"
+	// feedsV7 "gno.land/r/demo/social_feeds_v7"
 )
 
 // Only registered user can create a new feed
@@ -73,6 +73,12 @@ func DeletePost(fid FeedID, pid PostID) {
 	}
 
 	post.Delete()
+
+	// If post is comment then decrease comments count on parent
+	if uint64(post.parentID) != 0 {
+		parent := feed.MustGetPost(post.parentID)
+		parent.commentsCount -= 1
+	}
 }
 
 // Only feed owner can ban the post
@@ -306,8 +312,8 @@ func ImportFeedData(fid FeedID, jsonData string) string {
 	feed.FromJSON(jsonData)
 }
 
-func MigrateFromPreviousFeed(fid feedsV7.FeedID) {
-	// Get exported data from previous feeds
-	jsonData := feedsV7.ExportFeedData(fid)
-	ImportFeedData(FeedID(uint64(fid)), jsonData)
-}
+// func MigrateFromPreviousFeed(fid feedsV7.FeedID) {
+// 	// Get exported data from previous feeds
+// 	jsonData := feedsV7.ExportFeedData(fid)
+// 	ImportFeedData(FeedID(uint64(fid)), jsonData)
+// }
