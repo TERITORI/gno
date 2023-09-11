@@ -13,7 +13,7 @@ import (
 	"gno.land/p/demo/ujson"
 	"gno.land/r/demo/boards"
 	// Fake previous version for testing
-	feedsV7 "gno.land/r/demo/social_feeds_v8"
+	feedsV7 "gno.land/r/demo/social_feeds_v9"
 	"gno.land/r/demo/users"
 )
 
