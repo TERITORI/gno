@@ -3,7 +3,7 @@ package ujson
 import (
 	"unicode/utf8"
 
-	utf16 "gno.land/p/demo/ujson/utf16"
+	utf16 "gno.land/p/demo/ujson_v2/utf16"
 )
 
 const (

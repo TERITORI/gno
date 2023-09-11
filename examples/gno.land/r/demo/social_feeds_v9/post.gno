@@ -10,7 +10,7 @@ import (
 
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/ufmt"
-	"gno.land/p/demo/ujson"
+	ujson "gno.land/p/demo/ujson_v2"
 )
 
 type PostID uint64
