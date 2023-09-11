@@ -1,10 +1,16 @@
 package ujson
 
 import (
-	"unicode"
 	"unicode/utf8"
 
 	utf16 "gno.land/p/demo/ujson/utf16"
+)
+
+const (
+	MaxRune         = '\U0010FFFF' // Maximum valid Unicode code point.
+	ReplacementChar = '\uFFFD'     // Represents invalid code points.
+	MaxASCII        = '\u007F'     // maximum ASCII value.
+	MaxLatin1       = '\u00FF'     // maximum Latin-1 value.
 )
 
 // Ported from https://cs.opensource.google/go/go/+/refs/tags/go1.20.6:src/encoding/json/encode.go
@@ -174,14 +180,14 @@ func unquoteBytes(s []byte) (t []byte, ok bool) {
 				r += 6
 				if utf16.IsSurrogate(rr) {
 					rr1 := getu4(s[r:])
-					if dec := utf16.DecodeRune(rr, rr1); dec != unicode.ReplacementChar {
+					if dec := utf16.DecodeRune(rr, rr1); dec != ReplacementChar {
 						// A valid pair; consume.
 						r += 6
 						w += utf8.EncodeRune(b[w:], dec)
 						break
 					}
 					// Invalid surrogate; fall back to replacement rune.
-					rr = unicode.ReplacementChar
+					rr = ReplacementChar
 				}
 
 			}
