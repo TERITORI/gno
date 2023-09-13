@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+// TODO: use this pattern for Threshold and remove this file
+
 // Ported from https://github.com/CosmWasm/cw-utils/blob/7fce8a214f2f1e7763b8718dcbd2a6dd07f30988/src/expiration.rs
 
 type (

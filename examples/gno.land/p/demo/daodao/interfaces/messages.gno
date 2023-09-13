@@ -22,3 +22,5 @@ type MessageHandler interface {
 	MessageFromJSON(ast *ujson.JSONASTNode) ExecutableMessage
 	Type() string
 }
+
+type MessageHandlerFactory func(core IDAOCore) MessageHandler

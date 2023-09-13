@@ -6,14 +6,13 @@ import (
 	"time"
 
 	"gno.land/p/demo/avl"
-	dao_core "gno.land/p/demo/daodao/core"
 	dao_interfaces "gno.land/p/demo/daodao/interfaces"
 	"gno.land/p/demo/ujson"
 )
 
 type DAOProposalSingleOpts struct {
 	/// The threshold a proposal must reach to complete.
-	Threshold dao_interfaces.Threshold
+	Threshold Threshold
 	/// The default maximum amount of time a proposal may be voted on
 	/// before expiring.
 	MaxVotingPeriod time.Duration
@@ -47,12 +46,12 @@ type DAOProposalSingleOpts struct {
 type daoProposalSingle struct {
 	dao_interfaces.IProposalModule
 
-	core      dao_core.IDAOCore
+	core      dao_interfaces.IDAOCore
 	opts      *DAOProposalSingleOpts
-	proposals []dao_interfaces.Proposal
+	proposals []Proposal
 }
 
-func NewDAOProposalSingle(core dao_core.IDAOCore, opts *DAOProposalSingleOpts) *daoProposalSingle {
+func NewDAOProposalSingle(core dao_interfaces.IDAOCore, opts *DAOProposalSingleOpts) *daoProposalSingle {
 	if core == nil {
 		panic("core cannot be nil")
 	}
@@ -147,7 +146,7 @@ func (d *daoProposalSingle) Render(path string) string {
 
 		// /* dev
 		p.Ballots.Iterate("", "", func(k string, v interface{}) bool {
-			ballot := v.(dao_interfaces.Ballot)
+			ballot := v.(Ballot)
 			proposalsStr += "- " + k + " voted " + ballot.Vote.String() + "\n"
 			return false
 		})
@@ -178,7 +177,7 @@ func (d *daoProposalSingle) Render(path string) string {
 
 func (d *daoProposalSingle) Propose(title string, description string, messages []dao_interfaces.ExecutableMessage) {
 	// TODO: auth
-	d.proposals = append(d.proposals, dao_interfaces.Proposal{
+	d.proposals = append(d.proposals, Proposal{
 		ID:          len(d.proposals),
 		Title:       title,
 		Description: description,
@@ -186,11 +185,11 @@ func (d *daoProposalSingle) Propose(title string, description string, messages [
 		Proposer:    std.GetOrigCaller(),
 		Ballots:     avl.NewTree(), // dev
 		// Ballots: avl.NewMutTree(), // test3
-		Status: dao_interfaces.ProposalStatusOpen,
+		Status: ProposalStatusOpen,
 	})
 }
 
-func (d *daoProposalSingle) GetBallot(proposalID int, memberAddress std.Address) dao_interfaces.Ballot {
+func (d *daoProposalSingle) GetBallot(proposalID int, memberAddress std.Address) Ballot {
 	if len(d.proposals) <= proposalID || proposalID < 0 {
 		panic("proposal does not exist")
 	}
@@ -199,10 +198,10 @@ func (d *daoProposalSingle) GetBallot(proposalID int, memberAddress std.Address)
 	if !has {
 		panic("ballot does not exist")
 	}
-	return ballot.(dao_interfaces.Ballot)
+	return ballot.(Ballot)
 }
 
-func (d *daoProposalSingle) Vote(proposalID int, vote dao_interfaces.Vote, rationale string) {
+func (d *daoProposalSingle) Vote(proposalID int, vote Vote, rationale string) {
 	voter := std.PrevRealm().Addr()
 
 	if len(d.proposals) <= proposalID || proposalID < 0 {
@@ -220,7 +219,7 @@ func (d *daoProposalSingle) Vote(proposalID int, vote dao_interfaces.Vote, ratio
 	if ok := proposal.Ballots.Has(voter.String()); ok {
 		panic("you already voted")
 	}
-	proposal.Ballots.Set(voter.String(), dao_interfaces.Ballot{
+	proposal.Ballots.Set(voter.String(), Ballot{
 		Vote:      vote,
 		Power:     votePower,
 		Rationale: rationale,
@@ -240,16 +239,18 @@ func (d *daoProposalSingle) Execute(proposalID int) {
 	prop := d.proposals[proposalID]
 
 	d.updateStatus(proposalID)
-	if prop.Status != dao_interfaces.ProposalStatusPassed {
+	if prop.Status != ProposalStatusPassed {
 		panic("proposal is not passed")
 	}
 
-	d.core.ExecuteMessages(prop.Messages)
+	for _, m := range prop.Messages {
+		d.core.Registry().Execute(m)
+	}
 
-	d.proposals[proposalID].Status = dao_interfaces.ProposalStatusExecuted
+	d.proposals[proposalID].Status = ProposalStatusExecuted
 }
 
-func (d *daoProposalSingle) Proposals() []dao_interfaces.Proposal {
+func (d *daoProposalSingle) Proposals() []Proposal {
 	return d.proposals
 }
 
@@ -257,14 +258,14 @@ func (d *daoProposalSingle) ProposalsJSON() string {
 	return ujson.FormatSlice(d.proposals)
 }
 
-func (d *daoProposalSingle) Threshold() dao_interfaces.Threshold {
+func (d *daoProposalSingle) Threshold() Threshold {
 	return d.opts.Threshold
 }
 
 func (d *daoProposalSingle) updateStatus(proposalID int) {
 	proposal := d.proposals[proposalID]
-	if proposal.Status == dao_interfaces.ProposalStatusOpen && d.isPassed(proposalID) {
-		d.proposals[proposalID].Status = dao_interfaces.ProposalStatusPassed
+	if proposal.Status == ProposalStatusOpen && d.isPassed(proposalID) {
+		d.proposals[proposalID].Status = ProposalStatusPassed
 		return
 	}
 }
@@ -287,7 +288,7 @@ func (d *daoProposalSingle) isPassed(proposalID int) bool {
 	return doesVoteCountPass(proposal.Votes.Yes, options, threshold)
 }
 
-func doesVoteCountPass(yesVotes uint64, options uint64, percent dao_interfaces.PercentageThreshold) bool {
+func doesVoteCountPass(yesVotes uint64, options uint64, percent PercentageThreshold) bool {
 	if options == 0 {
 		return false
 	}

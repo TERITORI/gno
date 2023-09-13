@@ -4,17 +4,18 @@ import (
 	"std"
 	"testing"
 
+	dao_interfaces "gno.land/p/demo/daodao/interfaces"
 	"gno.land/r/demo/groups"
 )
 
-func Test(t *testing.T) {
-	{
-		g := groups.CreateGroup("test_voting_group")
-		v := NewVotingGroup(g)
-		got := v.TotalPower()
-		expected := uint64(0)
-		if got != expected {
-			t.Fatalf("expected %q, got %q.", expected, got)
-		}
+func TestVotingGroup(t *testing.T) {
+	g := groups.CreateGroup("test_voting_group")
+	v := NewVotingGroup(g)
+	var i dao_interfaces.IVotingModule
+	i = v
+	got := i.TotalPower()
+	expected := uint64(0)
+	if got != expected {
+		t.Fatalf("expected %q, got %q.", expected, got)
 	}
 }

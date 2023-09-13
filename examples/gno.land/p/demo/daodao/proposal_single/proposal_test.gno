@@ -1,15 +1,16 @@
-package dao_interfaces
+package dao_proposal_single
 
 import (
 	"testing"
 
 	"gno.land/p/demo/avl"
+	dao_interfaces "gno.land/p/demo/daodao/interfaces"
 	"gno.land/p/demo/ujson"
 )
 
 type NoopMessage struct{}
 
-var _ ExecutableMessage = (*NoopMessage)(nil)
+var _ dao_interfaces.ExecutableMessage = (*NoopMessage)(nil)
 
 func (m NoopMessage) String() string {
 	return "noop"
@@ -51,7 +52,7 @@ func TestProposalJSON(t *testing.T) {
 			Description: `Wolol1\"`,
 			Proposer:    "0x1234567890",
 			Status:      ProposalStatusExecuted,
-			Messages:    []ExecutableMessage{NoopMessage{}, NoopMessage{}, NoopMessage{}},
+			Messages:    []dao_interfaces.ExecutableMessage{NoopMessage{}, NoopMessage{}, NoopMessage{}},
 		},
 	}
 	props[0].Ballots.Set("0x1234567890", Ballot{Power: 1, Vote: VoteYes, Rationale: "test"})

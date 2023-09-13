@@ -1,18 +1,13 @@
-package dao_interfaces
+package dao_proposal_single
 
 import (
 	"std"
 	"strconv"
 
 	"gno.land/p/demo/avl"
+	dao_interfaces "gno.land/p/demo/daodao/interfaces"
 	"gno.land/p/demo/ujson"
 )
-
-type IVotingModule interface {
-	VotingPower(addr std.Address) uint64
-	TotalPower() uint64
-	Render(path string) string
-}
 
 type Ballot struct {
 	Power     uint64
@@ -77,7 +72,7 @@ type Proposal struct {
 	Title       string
 	Description string
 	Proposer    std.Address
-	Messages    []ExecutableMessage
+	Messages    []dao_interfaces.ExecutableMessage
 	Ballots     *avl.Tree // dev
 	// Ballots *avl.MutTree // test3
 	Votes  Votes
@@ -147,20 +142,4 @@ func (v Vote) String() string {
 	default:
 		return "Unknown(" + strconv.Itoa(int(v)) + ")"
 	}
-}
-
-type IProposalModule interface {
-	Propose(
-		title string,
-		description string,
-		actions []ExecutableMessage,
-	)
-	Vote(proposalId int, vote Vote, rationale string)
-	Execute(proposalId int)
-	Threshold() Threshold
-
-	Proposals() []Proposal
-	GetBallot(proposalId int, addr std.Address) Ballot
-
-	Render(path string) string
 }

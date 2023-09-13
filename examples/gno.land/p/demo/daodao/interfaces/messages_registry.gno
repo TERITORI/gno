@@ -13,11 +13,18 @@ type MessagesRegistry struct {
 }
 
 func NewMessagesRegistry() *MessagesRegistry {
-	return &MessagesRegistry{handlers: avl.NewTree()}
+	registry := &MessagesRegistry{handlers: avl.NewTree()}
+	registry.Register(NewRegisterHandlerExecutableMessageHandler(registry))
+	registry.Register(NewRemoveHandlerExecutableMessageHandler(registry))
+	return registry
 }
 
 func (r *MessagesRegistry) Register(handler MessageHandler) {
 	r.handlers.Set(handler.Type(), handler)
+}
+
+func (r *MessagesRegistry) Remove(t string) {
+	r.handlers.Remove(t)
 }
 
 func (r *MessagesRegistry) MessagesFromJSON(messagesJSON string) []ExecutableMessage {
@@ -51,4 +58,86 @@ func (r *MessagesRegistry) ExecuteMessages(msgs []ExecutableMessage) {
 	for _, msg := range msgs {
 		r.Execute(msg)
 	}
+}
+
+type RegisterHandlerExecutableMessage struct {
+	Handler MessageHandler
+}
+
+func (m *RegisterHandlerExecutableMessage) Type() string {
+	return "gno.land/p/demo/daodao/interfaces.RegisterHandler"
+}
+
+func (m *RegisterHandlerExecutableMessage) FromJSON(ast *ujson.JSONASTNode) {
+	panic("not implemented")
+}
+
+func (m *RegisterHandlerExecutableMessage) ToJSON() string {
+	panic("not implemented")
+}
+
+func (m *RegisterHandlerExecutableMessage) String() string {
+	return m.Handler.Type()
+}
+
+type RegisterHandlerExecutableMessageHandler struct {
+	registry *MessagesRegistry
+}
+
+func NewRegisterHandlerExecutableMessageHandler(registry *MessagesRegistry) *RegisterHandlerExecutableMessageHandler {
+	return &RegisterHandlerExecutableMessageHandler{registry: registry}
+}
+
+func (h *RegisterHandlerExecutableMessageHandler) Type() string {
+	return RegisterHandlerExecutableMessage{}.Type()
+}
+
+func (h *RegisterHandlerExecutableMessageHandler) MessageFromJSON(ast *ujson.JSONASTNode) ExecutableMessage {
+	panic("not implemented")
+}
+
+func (h *RegisterHandlerExecutableMessageHandler) Execute(msg ExecutableMessage) {
+	h.registry.Register(msg.(*RegisterHandlerExecutableMessage).Handler)
+}
+
+type RemoveHandlerExecutableMessage struct {
+	HandlerType string
+}
+
+func (m *RemoveHandlerExecutableMessage) Type() string {
+	return "gno.land/p/demo/daodao/interfaces.RemoveHandler"
+}
+
+func (m *RemoveHandlerExecutableMessage) FromJSON(ast *ujson.JSONASTNode) {
+	ast.ParseAny(&m.HandlerType)
+}
+
+func (m *RemoveHandlerExecutableMessage) ToJSON() string {
+	ujson.FormatAny(m.HandlerType)
+}
+
+func (m *RemoveHandlerExecutableMessage) String() string {
+	return m.HandlerType
+}
+
+type RemoveHandlerExecutableMessageHandler struct {
+	registry *MessagesRegistry
+}
+
+func NewRemoveHandlerExecutableMessageHandler(registry *MessagesRegistry) *RemoveHandlerExecutableMessageHandler {
+	return &RemoveHandlerExecutableMessageHandler{registry: registry}
+}
+
+func (h *RemoveHandlerExecutableMessageHandler) Type() string {
+	return RemoveHandlerExecutableMessage{}.Type()
+}
+
+func (h *RemoveHandlerExecutableMessageHandler) MessageFromJSON(ast *ujson.JSONASTNode) ExecutableMessage {
+	msg := &RemoveHandlerExecutableMessage{}
+	ast.ParseAny(msg)
+	return msg
+}
+
+func (h *RemoveHandlerExecutableMessageHandler) Execute(msg ExecutableMessage) {
+	h.registry.Remove(msg.(*RemoveHandlerExecutableMessage).HandlerType)
 }

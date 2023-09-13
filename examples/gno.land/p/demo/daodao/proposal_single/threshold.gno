@@ -1,4 +1,4 @@
-package dao_interfaces
+package dao_proposal_single
 
 import (
 	"strconv"

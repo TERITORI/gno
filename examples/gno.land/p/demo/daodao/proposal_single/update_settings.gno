@@ -2,6 +2,7 @@ package dao_proposal_single
 
 import (
 	"encoding/binary"
+	"std"
 	"strings"
 
 	"gno.land/p/demo/daodao/interfaces"
@@ -10,7 +11,7 @@ import (
 type UpdateSettingsMessage struct {
 	dao_interfaces.ExecutableMessage
 
-	Threshold *dao_interfaces.Threshold
+	Threshold *Threshold
 }
 
 func (usm *UpdateSettingsMessage) Type() string {
