@@ -43,7 +43,7 @@ type DAOProposalSingleOpts struct {
 	CloseProposalOnExecutionFailure bool
 }
 
-type daoProposalSingle struct {
+type DAOProposalSingle struct {
 	dao_interfaces.IProposalModule
 
 	core      dao_interfaces.IDAOCore
@@ -51,7 +51,7 @@ type daoProposalSingle struct {
 	proposals []Proposal
 }
 
-func NewDAOProposalSingle(core dao_interfaces.IDAOCore, opts *DAOProposalSingleOpts) *daoProposalSingle {
+func NewDAOProposalSingle(core dao_interfaces.IDAOCore, opts *DAOProposalSingleOpts) *DAOProposalSingle {
 	if core == nil {
 		panic("core cannot be nil")
 	}
@@ -94,10 +94,10 @@ func NewDAOProposalSingle(core dao_interfaces.IDAOCore, opts *DAOProposalSingleO
 		panic("opts.Threshold.Quorum must be <= 100%")
 	}
 
-	return &daoProposalSingle{core: core, opts: opts}
+	return &DAOProposalSingle{core: core, opts: opts}
 }
 
-func (d *daoProposalSingle) Render(path string) string {
+func (d *DAOProposalSingle) Render(path string) string {
 	minVotingPeriodStr := "No minimum voting period"
 	if d.opts.MinVotingPeriod != 0 {
 		minVotingPeriodStr = "Min voting period: " + d.opts.MinVotingPeriod.String()
@@ -175,10 +175,11 @@ func (d *daoProposalSingle) Render(path string) string {
 		proposalsStr
 }
 
-func (d *daoProposalSingle) Propose(title string, description string, messages []dao_interfaces.ExecutableMessage) {
+func (d *DAOProposalSingle) Propose(title string, description string, messages []dao_interfaces.ExecutableMessage) int {
+	id := len(d.proposals)
 	// TODO: auth
 	d.proposals = append(d.proposals, Proposal{
-		ID:          len(d.proposals),
+		ID:          id,
 		Title:       title,
 		Description: description,
 		Messages:    messages,
@@ -187,9 +188,10 @@ func (d *daoProposalSingle) Propose(title string, description string, messages [
 		// Ballots: avl.NewMutTree(), // test3
 		Status: ProposalStatusOpen,
 	})
+	return id
 }
 
-func (d *daoProposalSingle) GetBallot(proposalID int, memberAddress std.Address) Ballot {
+func (d *DAOProposalSingle) GetBallot(proposalID int, memberAddress std.Address) Ballot {
 	if len(d.proposals) <= proposalID || proposalID < 0 {
 		panic("proposal does not exist")
 	}
@@ -201,7 +203,22 @@ func (d *daoProposalSingle) GetBallot(proposalID int, memberAddress std.Address)
 	return ballot.(Ballot)
 }
 
-func (d *daoProposalSingle) Vote(proposalID int, vote Vote, rationale string) {
+type VoteWithRationale struct {
+	Vote      Vote
+	Rationale string
+}
+
+func (v *VoteWithRationale) FromJSON(ast *ujson.JSONASTNode) {
+	ast.ParseObject([]*ujson.ParseKV{
+		{Key: "vote", Value: &v.Vote},
+		{Key: "rationale", Value: &v.Rationale},
+	})
+}
+
+func (d *DAOProposalSingle) VoteJSON(proposalID int, voteJSON string) {
+	var v VoteWithRationale
+	ujson.ParseAny(voteJSON, &v)
+
 	voter := std.PrevRealm().Addr()
 
 	if len(d.proposals) <= proposalID || proposalID < 0 {
@@ -220,17 +237,17 @@ func (d *daoProposalSingle) Vote(proposalID int, vote Vote, rationale string) {
 		panic("you already voted")
 	}
 	proposal.Ballots.Set(voter.String(), Ballot{
-		Vote:      vote,
+		Vote:      v.Vote,
 		Power:     votePower,
-		Rationale: rationale,
+		Rationale: v.Rationale,
 	})
 
-	proposal.Votes.Add(vote, votePower)
+	proposal.Votes.Add(v.Vote, votePower)
 
 	d.updateStatus(proposalID)
 }
 
-func (d *daoProposalSingle) Execute(proposalID int) {
+func (d *DAOProposalSingle) Execute(proposalID int) {
 	executer := std.GetOrigCaller()
 
 	if len(d.proposals) <= proposalID || proposalID < 0 {
@@ -250,19 +267,40 @@ func (d *daoProposalSingle) Execute(proposalID int) {
 	d.proposals[proposalID].Status = ProposalStatusExecuted
 }
 
-func (d *daoProposalSingle) Proposals() []Proposal {
+type ProposalRequest struct {
+	Title       string
+	Description string
+	Messages    *ujson.JSONASTNode
+}
+
+func (pr *ProposalRequest) FromJSON(ast *ujson.JSONASTNode) {
+	ast.ParseObject([]*ujson.ParseKV{
+		{Key: "title", Value: &pr.Title},
+		{Key: "description", Value: &pr.Description},
+		{Key: "messages", Value: &pr.Messages},
+	})
+}
+
+func (d *DAOProposalSingle) ProposeJSON(proposalJSON string) int {
+	var req ProposalRequest
+	ujson.ParseAny(proposalJSON, &req)
+	msgs := d.core.Registry().MessagesFromJSON(req.Messages.String())
+	return d.Propose(req.Title, req.Description, msgs)
+}
+
+func (d *DAOProposalSingle) Proposals() []Proposal {
 	return d.proposals
 }
 
-func (d *daoProposalSingle) ProposalsJSON() string {
+func (d *DAOProposalSingle) ProposalsJSON(limit int, startAfter string, reverse bool) string {
 	return ujson.FormatSlice(d.proposals)
 }
 
-func (d *daoProposalSingle) Threshold() Threshold {
+func (d *DAOProposalSingle) Threshold() Threshold {
 	return d.opts.Threshold
 }
 
-func (d *daoProposalSingle) updateStatus(proposalID int) {
+func (d *DAOProposalSingle) updateStatus(proposalID int) {
 	proposal := d.proposals[proposalID]
 	if proposal.Status == ProposalStatusOpen && d.isPassed(proposalID) {
 		d.proposals[proposalID].Status = ProposalStatusPassed
@@ -270,7 +308,7 @@ func (d *daoProposalSingle) updateStatus(proposalID int) {
 	}
 }
 
-func (d *daoProposalSingle) isPassed(proposalID int) bool {
+func (d *DAOProposalSingle) isPassed(proposalID int) bool {
 	proposal := d.proposals[proposalID]
 
 	// TODO: support other threshold types

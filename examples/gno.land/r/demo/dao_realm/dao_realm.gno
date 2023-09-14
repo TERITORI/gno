@@ -8,77 +8,105 @@ import (
 
 	dao_core "gno.land/p/demo/daodao/core"
 	dao_interfaces "gno.land/p/demo/daodao/interfaces"
-	"gno.land/p/demo/daodao/proposal_single"
-	"gno.land/p/demo/daodao/voting_group"
+	proposal_single "gno.land/p/demo/daodao/proposal_single"
+	voting_group "gno.land/p/demo/daodao/voting_group"
 	"gno.land/p/demo/ujson"
 	"gno.land/r/demo/groups"
 	modboards "gno.land/r/demo/modboards"
 )
 
 var (
-	daoCore       dao_core.IDAOCore
+	daoCore       dao_interfaces.IDAOCore
 	mainBoardName = "dao_realm"
+	groupName     = mainBoardName + "_voting_group"
 	groupID       groups.GroupID
 )
 
 func init() {
-	groupID = groups.CreateGroup(mainBoardName)
-	groups.AddMember(groupID, "g1747t5m2f08plqjlrjk2q0qld7465hxz8gkx59c", 1, "")
-	groups.AddMember(groupID, "g108cszmcvs4r3k67k7h5zuhm4el3qhlrxzhshtv", 1, "")
-	groups.AddMember(groupID, "g14u5eaheavy0ux4dmpykg2gvxpvqvexm9cyg58a", 1, "")
-	groups.AddMember(groupID, "g1ckn395mpttp0vupgtratyufdaakgh8jgkmr3ym", 1, "")
-	groups.AddMember(groupID, std.GetOrigCaller().String(), 1, "")
-
-	daoCore = dao_core.NewDAOCore(dao_voting_group.NewVotingGroup(groupID), nil, []dao_interfaces.MessageHandler{
-		groups.NewAddMemberHandler(),
-		groups.NewDeleteMemberHandler(),
-	})
-
-	tt := dao_interfaces.Percent(100) // 1%
-	tq := dao_interfaces.Percent(100) // 1%
-	proposalMod := dao_proposal_single.NewDAOProposalSingle(daoCore, &dao_proposal_single.DAOProposalSingleOpts{
-		MaxVotingPeriod: time.Hour * 24 * 42,
-		Threshold: dao_interfaces.Threshold{ThresholdQuorum: &dao_interfaces.ThresholdQuorum{
-			Threshold: dao_interfaces.PercentageThreshold{Percent: &tt},
-			Quorum:    dao_interfaces.PercentageThreshold{Percent: &tq},
-		}},
-	})
-	// TODO: add a router to support multiple proposal modules
-	daoCore.RegisterMessageHandler(dao_proposal_single.NewUpdateSettingsHandler(proposalMod))
-	daoCore.AddProposalModule(proposalMod)
-
-	daoCore.RegisterMessageHandler(modboards.NewCreateBoardHandler())
-	daoCore.RegisterMessageHandler(modboards.NewDeletePostHandler())
 	modboards.CreateBoard(mainBoardName)
+
+	votingModuleFactory := func(core dao_interfaces.IDAOCore) dao_interfaces.IVotingModule {
+		groupID = groups.CreateGroup(groupName)
+		groups.AddMember(groupID, "g1747t5m2f08plqjlrjk2q0qld7465hxz8gkx59c", 1, "")
+		groups.AddMember(groupID, "g108cszmcvs4r3k67k7h5zuhm4el3qhlrxzhshtv", 1, "")
+		groups.AddMember(groupID, "g14u5eaheavy0ux4dmpykg2gvxpvqvexm9cyg58a", 1, "")
+		groups.AddMember(groupID, "g1ckn395mpttp0vupgtratyufdaakgh8jgkmr3ym", 1, "")
+		groups.AddMember(groupID, std.GetOrigCaller().String(), 1, "")
+		return voting_group.NewVotingGroup(groupID)
+	}
+
+	// TODO: consider using factories that return multiple modules and handlers
+
+	proposalModulesFactories := []dao_interfaces.ProposalModuleFactory{
+		func(core dao_interfaces.IDAOCore) dao_interfaces.IProposalModule {
+			tt := proposal_single.Percent(100) // 1%
+			tq := proposal_single.Percent(100) // 1%
+			return proposal_single.NewDAOProposalSingle(core, &proposal_single.DAOProposalSingleOpts{
+				MaxVotingPeriod: time.Hour * 24 * 42,
+				Threshold: proposal_single.Threshold{ThresholdQuorum: &proposal_single.ThresholdQuorum{
+					Threshold: proposal_single.PercentageThreshold{Percent: &tt},
+					Quorum:    proposal_single.PercentageThreshold{Percent: &tq},
+				}},
+			})
+		},
+	}
+
+	messageHandlersFactories := []dao_interfaces.MessageHandlerFactory{
+		func(core dao_interfaces.IDAOCore) dao_interfaces.MessageHandler {
+			return groups.NewAddMemberHandler()
+		},
+		func(core dao_interfaces.IDAOCore) dao_interfaces.MessageHandler {
+			return groups.NewDeleteMemberHandler()
+		},
+		func(core dao_interfaces.IDAOCore) dao_interfaces.MessageHandler {
+			// TODO: add a router to support multiple proposal modules
+			propMod := core.ProposalModules()[0]
+			return proposal_single.NewUpdateSettingsHandler(propMod.Module.(*proposal_single.DAOProposalSingle))
+		},
+		func(core dao_interfaces.IDAOCore) dao_interfaces.MessageHandler {
+			return modboards.NewCreateBoardHandler()
+		},
+		func(core dao_interfaces.IDAOCore) dao_interfaces.MessageHandler {
+			return modboards.NewDeletePostHandler()
+		},
+	}
+
+	daoCore = dao_core.NewDAOCore(votingModuleFactory, proposalModulesFactories, messageHandlersFactories)
 }
 
 func Render(path string) string {
 	return "[[board](/r/demo/modboards:" + mainBoardName + ")]\n\n" + daoCore.Render(path)
 }
 
-func GetCore() dao_core.IDAOCore {
-	return daoCore
-}
-
-func Vote(moduleIndex int, proposalID int, vote dao_interfaces.Vote, rationale string) {
-	dao_core.GetProposalModule(daoCore, moduleIndex).Vote(proposalID, vote, rationale)
+func VoteJSON(moduleIndex int, proposalID int, voteJSON string) {
+	// move check in dao core
+	module := dao_core.GetProposalModule(daoCore, moduleIndex)
+	if !module.Enabled {
+		panic("proposal module is not enabled")
+	}
+	module.Module.VoteJSON(proposalID, voteJSON)
 }
 
 func Execute(moduleIndex int, proposalID int) {
-	dao_core.GetProposalModule(daoCore, moduleIndex).Execute(proposalID)
+	// move check in dao core
+	module := dao_core.GetProposalModule(daoCore, moduleIndex)
+	if !module.Enabled {
+		panic("proposal module is not enabled")
+	}
+	module.Module.Execute(proposalID)
 }
 
-func Propose(moduleIndex int, title string, description string, messagesJSON string) {
-	mod := dao_core.GetProposalModule(daoCore, moduleIndex)
-	messages := daoCore.GetRegistry().MessagesFromJSON(messagesJSON)
-	mod.Propose(title, description, messages) // the unmarshal should be done in module
+func ProposeJSON(moduleIndex int, proposalJSON string) {
+	// move check in dao core
+	module := dao_core.GetProposalModule(daoCore, moduleIndex)
+	if !module.Enabled {
+		panic("proposal module is not enabled")
+	}
+	module.Module.ProposeJSON(proposalJSON)
 }
 
-func GetProposalsJSON(moduleIndex int) string {
-	return ujson.FormatSlice(dao_core.GetProposalModule(daoCore, moduleIndex).Proposals())
-}
-
-func GetMembersJSON() string {
-	members := groups.GetMembers(groupID)
-	return ujson.FormatSlice(members)
+func getProposalsJSON(moduleIndex int, limit int, startAfter string, reverse bool) string {
+	// move logic in dao core
+	module := dao_core.GetProposalModule(daoCore, moduleIndex)
+	return module.Module.ProposalsJSON(limit, startAfter, reverse)
 }

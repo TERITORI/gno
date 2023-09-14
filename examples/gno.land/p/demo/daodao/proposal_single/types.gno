@@ -131,6 +131,13 @@ func (v Vote) ToJSON() string {
 	return ujson.FormatString(v.String())
 }
 
+func (v *Vote) FromJSON(ast *ujson.JSONASTNode) {
+	var val int
+	ast.ParseAny(&val)
+	// FIXME: validate
+	*v = Vote(val)
+}
+
 func (v Vote) String() string {
 	switch v {
 	case VoteYes:

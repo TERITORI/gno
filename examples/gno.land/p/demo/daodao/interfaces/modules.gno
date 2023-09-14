@@ -28,6 +28,7 @@ type IProposalModule interface {
 	Info() ModuleInfo
 	Render(path string) string
 	Execute(proposalId int)
+	VoteJSON(proposalID int, voteJSON string)
 	ProposeJSON(proposalJSON string) int
 	ProposalsJSON(limit int, startAfter string, reverse bool) string
 }

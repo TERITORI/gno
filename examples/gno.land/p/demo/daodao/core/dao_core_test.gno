@@ -57,6 +57,10 @@ func (pm *proposalModule) Info() dao_interfaces.ModuleInfo {
 	}
 }
 
+func (pm *proposalModule) VoteJSON(proposalID int, voteJSON string) {
+	panic("not implemented")
+}
+
 func (pm *proposalModule) Render(path string) string {
 	return "# Test Proposal Module"
 }

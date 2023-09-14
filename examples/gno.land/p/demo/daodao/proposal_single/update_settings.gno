@@ -26,14 +26,14 @@ func (usm *UpdateSettingsMessage) String() string {
 	return strings.Join(ss, "\n--\n")
 }
 
-func NewUpdateSettingsHandler(mod *daoProposalSingle) dao_interfaces.MessageHandler {
+func NewUpdateSettingsHandler(mod *DAOProposalSingle) dao_interfaces.MessageHandler {
 	return &updateSettingsHandler{mod: mod}
 }
 
 type updateSettingsHandler struct {
 	dao_interfaces.MessageHandler
 
-	mod *daoProposalSingle
+	mod *DAOProposalSingle
 }
 
 func (h *updateSettingsHandler) Execute(message dao_interfaces.ExecutableMessage) {
