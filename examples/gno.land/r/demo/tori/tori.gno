@@ -6,7 +6,6 @@ import (
 
 	"gno.land/p/demo/grc/grc20"
 	"gno.land/p/demo/ufmt"
-	"gno.land/r/demo/grc20_registry"
 	"gno.land/r/demo/users"
 )
 
@@ -19,7 +18,7 @@ var (
 func init() {
 	tori = grc20.NewAdminToken("Tori", "TORI", 6)
 	userTori = tori.GRC20()
-	grc20_registry.Register(userTori) // found another bug, calling this sets some grc20 internal object's pkgid to the registry realm id
+	// grc20_registry.Register(userTori) // found another bug, calling this sets some grc20 internal object's pkgid to the registry realm id
 }
 
 // method proxies as public functions.
