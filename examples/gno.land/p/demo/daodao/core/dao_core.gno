@@ -137,10 +137,6 @@ func (d *daoCore) Info() {
 	panic(ErrNotImplemented)
 }
 
-func (d *daoCore) PauseInfo() {
-	panic(ErrNotImplemented)
-}
-
 func (d *daoCore) ProposalModules() []dao_interfaces.ActivableProposalModule {
 	return d.proposalModules
 }

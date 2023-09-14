@@ -165,6 +165,4 @@ func TestDAOCore(t *testing.T) {
 	if votingMod != newVotingModule {
 		t.Errorf("new voting module is not the same as the one added")
 	}
-
-	// TODO: test pause
 }
