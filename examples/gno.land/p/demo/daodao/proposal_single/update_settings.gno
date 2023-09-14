@@ -8,6 +8,8 @@ import (
 	"gno.land/p/demo/daodao/interfaces"
 )
 
+// TODO: convert to json
+
 type UpdateSettingsMessage struct {
 	dao_interfaces.ExecutableMessage
 
