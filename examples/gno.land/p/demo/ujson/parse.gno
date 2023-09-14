@@ -4,6 +4,7 @@ import (
 	"std"
 	"strconv"
 	"strings"
+	"time"
 
 	"gno.land/p/demo/avl"
 )
@@ -98,12 +99,28 @@ func (ast *JSONASTNode) ParseAny(ptr *interface{}) {
 		ptr.(FromJSONAble).FromJSON(ast)
 	case **JSONASTNode:
 		*ptr.(**JSONASTNode) = ast
+	case *time.Time:
+		ast.ParseTime(ptr.(*time.Time))
 	default:
 		if ast.Kind == JSONKindValue && ast.ValueKind == JSONTokenKindNull {
 			*ptr = nil
 			return
 		}
 		panic("type not defined for `" + ast.String() + "`")
+	}
+}
+
+// loosely ported from https://cs.opensource.google/go/go/+/master:src/time/time.go;l=1370?q=appendStrictRFC3339&ss=go%2Fgo
+// it's not a full port since it would require copying lot of utils
+func (ast *JSONASTNode) ParseTime(t *time.Time) {
+	if ast.Kind != JSONKindValue && ast.ValueKind != JSONTokenKindString {
+		panic("time is not a string")
+	}
+	s := ParseString(ast.Value)
+	var err error
+	*t, err = time.Parse(time.RFC3339Nano, s)
+	if err != nil {
+		panic(err)
 	}
 }
 

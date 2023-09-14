@@ -3,9 +3,11 @@ package ujson
 // This package strives to have the same behavior as json.Marshal but does not support all types and returns strings
 
 import (
+	"errors"
 	"std"
 	"strconv"
 	"strings"
+	"time"
 
 	"gno.land/p/demo/avl"
 )
@@ -51,9 +53,33 @@ func FormatAny(p interface{}) string {
 		panic("float64 not implemented")
 	case bool:
 		return FormatBool(p.(bool))
+	case time.Time:
+		return FormatTime(p.(time.Time))
 	default:
 		return "null"
 	}
+}
+
+// loosely ported from https://cs.opensource.google/go/go/+/master:src/time/time.go;l=1357?q=appendStrictRFC3339&ss=go%2Fgo
+func FormatTime(t time.Time) string {
+	s := t.Format(time.RFC3339Nano)
+	b := []byte(s)
+
+	// Not all valid Go timestamps can be serialized as valid RFC 3339.
+	// Explicitly check for these edge cases.
+	// See https://go.dev/issue/4556 and https://go.dev/issue/54580.
+	n0 := 0
+	num2 := func(b []byte) byte { return 10*(b[0]-'0') + (b[1] - '0') }
+	switch {
+	case b[n0+len("9999")] != '-': // year must be exactly 4 digits wide
+		panic(errors.New("year outside of range [0,9999]"))
+	case b[len(b)-1] != 'Z':
+		c := b[len(b)-len("Z07:00")]
+		if ('0' <= c && c <= '9') || num2(b[len(b)-len("07:00"):]) >= 24 {
+			panic(errors.New("timezone hour outside of range [0,23]"))
+		}
+	}
+	return FormatString(string(b))
 }
 
 func FormatUint64(i uint64) string {

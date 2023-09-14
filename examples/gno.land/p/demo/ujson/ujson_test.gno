@@ -3,6 +3,7 @@ package ujson
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"gno.land/p/demo/avl"
 )
@@ -157,5 +158,21 @@ func TestString(t *testing.T) {
 	expected = `{"a":["42","null","true","false","hello\t\n\r"],"b":-3,"c":{"ia":{},"ib":{"foo":"bar"}},"d":4,"e":5,"f":true,"g":null,"avlTree":{"bar":"foo"}}`
 	if output != expected {
 		t.Errorf("Expected output to be `%s`, got `%s`", expected, output)
+	}
+}
+
+func TestTime(t *testing.T) {
+	json := `"2020-01-01T00:00:00Z"`
+
+	var tt time.Time
+	ParseAny(json, &tt)
+	expected := "2020-01-01T00:00:00Z"
+	if tt.Format(time.RFC3339) != expected {
+		t.Errorf("Expected A to be `%s`, got `%s`", expected, tt.Format(time.RFC3339))
+	}
+
+	ojson := FormatAny(tt)
+	if ojson != json {
+		t.Errorf("Expected output to be `%s`, got `%s`", json, ojson)
 	}
 }
