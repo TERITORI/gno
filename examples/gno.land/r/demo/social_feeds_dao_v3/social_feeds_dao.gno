@@ -19,7 +19,7 @@ import (
 var (
 	daoCore      dao_core.IDAOCore
 	registry     = dao_interfaces.NewMessagesRegistry()
-	mainFeedName = "teritori"
+	mainFeedName = "teritori9"
 	groupID      groups.GroupID
 )
 
