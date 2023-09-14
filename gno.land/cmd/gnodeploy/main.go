@@ -32,6 +32,7 @@ func main() {
 		gasWantedFlag      = fs.String("gas-wanted", "10000000", "gas wanted")
 		passwordFlag       = fs.String("password", "", "password")
 		ignoreFlag         = fs.String("ignore", "gno.land/p/demo/avl", "ignore packages")
+		dryRunFlag         = fs.Bool("dry-run", false, "dry run")
 	)
 
 	err := ff.Parse(fs, os.Args[1:])
@@ -96,6 +97,8 @@ func main() {
 
 	// empty password is ok
 	password := *passwordFlag
+
+	dryRun := *dryRunFlag
 
 	fmt.Print("Target packages:\n\n")
 	for _, targetPkgPath := range targetsPkgPath {
@@ -209,24 +212,30 @@ func main() {
 
 	fmt.Println("\nWill upgrade", len(upgrades), "packages")
 
-	fmt.Println("\nCopying root to temporary directory...")
-	tmpDir := ".deploy"
-	if err := os.RemoveAll(tmpDir); err != nil {
-		panic(errors.Wrap(err, "failed to remove "+tmpDir))
-	}
-	cmd := exec.Command("cp", "-r", packagesRoot, tmpDir)
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		panic(errors.Wrap(err, "failed to copy "+packagesRoot))
-	}
+	if !dryRun {
+		fmt.Println("\nCopying root to temporary directory...")
+		tmpDir := ".deploy"
+		if err := os.RemoveAll(tmpDir); err != nil {
+			panic(errors.Wrap(err, "failed to remove "+tmpDir))
+		}
+		cmd := exec.Command("cp", "-r", packagesRoot, tmpDir)
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			panic(errors.Wrap(err, "failed to copy "+packagesRoot))
+		}
 
-	// preversedPackagesRoot := packagesRoot
-	packagesRoot = tmpDir
+		// preversedPackagesRoot := packagesRoot
+		packagesRoot = tmpDir
+	}
 
 	fmt.Print("\nBumping:\n\n")
 
 	for oldPkgPath, newPkgPath := range upgrades {
 		fmt.Println(oldPkgPath, "->", newPkgPath)
+
+		if dryRun {
+			continue
+		}
 
 		r := regexp.MustCompile(oldPkgPath)
 
@@ -279,6 +288,10 @@ func main() {
 				panic(errors.Wrap(err, "failed to write "+gnoModPath))
 			}
 		}
+	}
+
+	if dryRun {
+		return
 	}
 
 	for oldPkgPath, newPkgPath := range upgrades {
