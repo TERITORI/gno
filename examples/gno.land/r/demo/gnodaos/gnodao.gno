@@ -1,8 +1,8 @@
 package gnodao
 
 import (
-	fmt "gno.land/p/demo/ufmt"
 	"gno.land/p/demo/avl"
+	fmt "gno.land/p/demo/ufmt"
 	"std"
 	"strconv"
 	"strings"
@@ -478,12 +478,12 @@ func RenderDAO(daoId uint64) string {
 	"id": %d,
 	"uri": "%s",
 	"metadata": "%s",
-	"funds" %d,
-	"totalVotingPower" %d,
-	"votingPeriod" %d,
-	"voteQuorum" %d,
-	"threshold" %d,
-	"vetoThreshold" %d
+	"funds": %d,
+	"totalVotingPower": %d,
+	"votingPeriod": %d,
+	"voteQuorum": %d,
+	"threshold": %d,
+	"vetoThreshold": %d
 }`, daoEncode.id, daoEncode.uri, daoEncode.metadata, daoEncode.funds, daoEncode.totalVotingPower, daoEncode.votingPeriod, daoEncode.voteQuorum, daoEncode.threshold, daoEncode.vetoThreshold)
 }
 
@@ -557,7 +557,7 @@ func RenderProposal(daoId, proposalId uint64) string {
 	"status": %d,
 	"vpUpdates": %s,
 	"votingPowers": %s
-}`, p.daoId, p.id, p.title, p.summary, p.spendAmount, p.spender.String(), p.newMetadata, p.newURI, p.submitTime, p.voteEndTime, p.status, vpUpdatesRendered, votingPowersBySumRendered)
+}`, p.daoId, p.id, p.title, p.summary, p.spendAmount, p.spender.String(), p.newMetadata, p.newURI, p.submitTime, p.voteEndTime, int(p.status), vpUpdatesRendered, votingPowersBySumRendered)
 }
 
 func RenderProposals(daoId, startAfter, limit uint64) string {
