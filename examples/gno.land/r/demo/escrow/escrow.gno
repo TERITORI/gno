@@ -42,7 +42,7 @@ var contracts []Contract
 
 // GNODAO FUNCTIONS
 func UpdateConfig(daoAdmin string) {
-	if daoAdmin == "" {
+	if config.daoAdmin == "" {
 		config.daoAdmin = daoAdmin
 		return
 	}
@@ -52,6 +52,10 @@ func UpdateConfig(daoAdmin string) {
 	}
 
 	config.daoAdmin = daoAdmin
+}
+
+func CurrentRealm() string {
+	return std.CurrentRealm().Addr().String()
 }
 
 func CreateContract(
@@ -83,7 +87,7 @@ func CreateContract(
 	})
 	foo20.TransferFrom(
 		users.AddressOrName(caller.String()),
-		users.AddressOrName(config.daoAdmin),
+		users.AddressOrName(std.CurrentRealm().Addr().String()),
 		escrowAmount)
 }
 
@@ -104,8 +108,6 @@ func CancelContract(contractId uint64) {
 
 	contracts[contractId].status = CANCELED
 
-	// return grc20 tokens back to sender
-	// TODO: resolve caller problem
 	foo20.Transfer(
 		users.AddressOrName(contract.sender),
 		contract.escrowAmount)
@@ -164,8 +166,6 @@ func CompleteContract(contractId uint64) {
 		panic("only contract sender can complete")
 	}
 
-	// send tokens to receiver
-	// TODO: resolve caller problem
 	foo20.Transfer(
 		users.AddressOrName(contract.receiver),
 		contract.escrowAmount)
@@ -190,8 +190,6 @@ func CompleteContractByDAO(contractId uint64, sellerAmount uint64) {
 	clientAmount := contract.escrowAmount - sellerAmount
 	contracts[contractId].status = COMPLETED
 
-	// send tokens for client and seller
-	// TODO: resolve caller problem
 	foo20.Transfer(
 		users.AddressOrName(contract.receiver),
 		sellerAmount)
@@ -230,12 +228,11 @@ func GetContracts(startAfter, limit uint64) []Contract {
 
 func RenderConfig() string {
 	return fmt.Sprintf(`{
-		"daoAdmin": %s
+		"daoAdmin": "%s"
 }`, config.daoAdmin)
 }
 
 func RenderContract(contractId uint64) string {
-	caller := std.GetOrigCaller()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -249,7 +246,7 @@ func RenderContract(contractId uint64) string {
 		"escrowAmount": %d,
 		"status": %d,
 		"expireAt": %d
-}`, c.id, c.sender, c.receiver, c.escrowToken, c.escrowAmount, c.status, c.expireAt)
+}`, c.id, c.sender, c.receiver, c.escrowToken, c.escrowAmount, int(c.status), c.expireAt)
 }
 
 func RenderContracts(startAfter uint64, limit uint64) string {
