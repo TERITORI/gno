@@ -18,12 +18,12 @@ func NewVotingGroup(groupID groups.GroupID) dao_interfaces.IVotingModule {
 	return &VotingGroup{groupID: groupID}
 }
 
-func (v *VotingGroup) VotingPower(addr std.Address) uint64 {
-	return uint64(groups.GetMemberWeightByAddress(v.groupID, addr))
+func (v *VotingGroup) VotingPowerAtHeight(addr std.Address, height int64) uint64 {
+	return uint64(groups.GetMemberWeightByAddress(v.groupID, addr, height))
 }
 
-func (v *VotingGroup) TotalPower() uint64 {
-	return uint64(groups.GetGroupTotalWeight(v.groupID))
+func (v *VotingGroup) TotalPowerAtHeight(height int64) uint64 {
+	return uint64(groups.GetGroupTotalWeight(v.groupID, height))
 }
 
 func (v *VotingGroup) Render(path string) string {

@@ -3,6 +3,7 @@ package groups
 import (
 	"std"
 
+	"gno.land/p/demo/ujson"
 	"gno.land/r/demo/users"
 )
 
@@ -56,7 +57,7 @@ func AddMember(gid GroupID, address string, weight int, metadata string) MemberI
 	midkey := memberIDKey(mid)
 	group.members.Set(midkey, member)
 	group.membersByAddress.Set(address, member)
-	group.totalWeight += weight
+	group.addToTotalWeight(weight)
 	mid++
 	group.lastMemberID = mid
 	return member.id
@@ -82,24 +83,24 @@ func DeleteMember(gid GroupID, mid MemberID) {
 	group.deleteMember(mid)
 }
 
-func GetMemberWeightByAddress(gid GroupID, addr std.Address) int {
+func GetMemberWeightByAddress(gid GroupID, addr std.Address, height int64) int {
 	group := getGroup(gid)
 	if group == nil {
 		return 0
 	}
-	member, ok := group.membersByAddress.Get(string(addr))
+	member, ok := group.membersByAddress.Get(string(addr), height)
 	if !ok {
 		return 0
 	}
 	return member.(*Member).weight
 }
 
-func GetGroupTotalWeight(gid GroupID) int {
+func GetGroupTotalWeight(gid GroupID, height int64) int {
 	group := getGroup(gid)
 	if group == nil {
 		return 0
 	}
-	return group.totalWeight
+	return group.getTotalWeight(height)
 }
 
 func GetMembers(gid GroupID) []Member {
@@ -108,9 +109,13 @@ func GetMembers(gid GroupID) []Member {
 		return nil
 	}
 	members := []Member{}
-	group.members.Iterate("", "", func(key string, value interface{}) bool {
+	group.members.Iterate("", "", 0, func(key string, value interface{}) bool {
 		members = append(members, *(value.(*Member)))
 		return false
 	})
 	return members
+}
+
+func GetMembersJSON(gid GroupID) string {
+	return ujson.FormatSlice(GetMembers(gid))
 }

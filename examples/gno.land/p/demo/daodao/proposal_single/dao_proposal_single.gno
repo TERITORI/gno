@@ -227,7 +227,7 @@ func (d *DAOProposalSingle) VoteJSON(proposalID int, voteJSON string) {
 	proposal := d.proposals[proposalID]
 	// TODO: check proposal expiration
 
-	votePower := d.core.VotingModule().VotingPower(voter)
+	votePower := d.core.VotingModule().VotingPowerAtHeight(voter, 0)
 	if votePower == 0 {
 		panic("you're not a member")
 	}
@@ -315,7 +315,7 @@ func (d *DAOProposalSingle) isPassed(proposalID int) bool {
 	threshold := d.opts.Threshold.ThresholdQuorum.Threshold
 	quorum := d.opts.Threshold.ThresholdQuorum.Quorum
 
-	totalPower := d.core.VotingModule().TotalPower()
+	totalPower := d.core.VotingModule().TotalPowerAtHeight(0)
 
 	if !doesVoteCountPass(proposal.Votes.Total(), totalPower, quorum) {
 		return false

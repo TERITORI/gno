@@ -39,7 +39,7 @@ func (member Member) ToJSON() string {
 		{Key: "address", Value: member.address},
 		{Key: "weight", Value: member.weight},
 		{Key: "metadata", Value: member.metadata},
-		// {Key: "createdAt", Value: member.createdAt.String()},
+		{Key: "createdAt", Value: member.createdAt},
 	})
 }
 
@@ -49,7 +49,7 @@ func (m *Member) FromJSON(ast *ujson.JSONASTNode) {
 		{Key: "address", Value: &m.address},
 		{Key: "weight", Value: &m.weight},
 		{Key: "metadata", Value: &m.metadata},
-		// {Key: "createdAt", Value: &m.createdAt},
+		{Key: "createdAt", Value: &m.createdAt},
 	})
 }
 

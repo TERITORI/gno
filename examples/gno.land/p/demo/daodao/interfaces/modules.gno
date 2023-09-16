@@ -17,8 +17,8 @@ type IVotingModule interface {
 	Core() IDAOCore
 	Info() ModuleInfo
 	Render(path string) string
-	VotingPower(address std.Address) (power uint64)
-	TotalPower() uint64
+	VotingPowerAtHeight(address std.Address, height int64) (power uint64)
+	TotalPowerAtHeight(height int64) uint64
 }
 
 type VotingModuleFactory func(core IDAOCore) IVotingModule

@@ -24,9 +24,9 @@ func TestInit(t *testing.T) {
 
 	{
 		membersJSON := ujson.FormatSlice(groups.GetMembers(groupID))
-		expected := `[{"id":0,"address":"g1747t5m2f08plqjlrjk2q0qld7465hxz8gkx59c","weight":1,"metadata":""},{"id":1,"address":"g108cszmcvs4r3k67k7h5zuhm4el3qhlrxzhshtv","weight":1,"metadata":""},{"id":2,"address":"g14u5eaheavy0ux4dmpykg2gvxpvqvexm9cyg58a","weight":1,"metadata":""},{"id":3,"address":"g1ckn395mpttp0vupgtratyufdaakgh8jgkmr3ym","weight":1,"metadata":""},{"id":4,"address":"g1wymu47drhr0kuq2098m792lytgtj2nyx77yrsm","weight":1,"metadata":""}]`
+		expected := `[{"id":0,"address":"g1747t5m2f08plqjlrjk2q0qld7465hxz8gkx59c","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":1,"address":"g108cszmcvs4r3k67k7h5zuhm4el3qhlrxzhshtv","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":2,"address":"g14u5eaheavy0ux4dmpykg2gvxpvqvexm9cyg58a","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":3,"address":"g1ckn395mpttp0vupgtratyufdaakgh8jgkmr3ym","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":4,"address":"g1wymu47drhr0kuq2098m792lytgtj2nyx77yrsm","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"}]`
 		if membersJSON != expected {
-			t.Fatalf("Expected %s, got %s", expected, membersJSON)
+			t.Fatalf("Expected:\n%s\nGot:\n%s", expected, membersJSON)
 		}
 	}
 }
@@ -45,9 +45,9 @@ func TestUpdateMembers(t *testing.T) {
 			VoteJSON(0, 0, fmt.Sprintf(`{"vote": %d, "rationale": "%s"}`, proposal_single.VoteYes, "testing"))
 			Execute(0, 0)
 			membersJSON = ujson.FormatSlice(groups.GetMembers(groupID))
-			expected := fmt.Sprintf(`[{"id":0,"address":"g1747t5m2f08plqjlrjk2q0qld7465hxz8gkx59c","weight":1,"metadata":""},{"id":1,"address":"g108cszmcvs4r3k67k7h5zuhm4el3qhlrxzhshtv","weight":1,"metadata":""},{"id":2,"address":"g14u5eaheavy0ux4dmpykg2gvxpvqvexm9cyg58a","weight":1,"metadata":""},{"id":3,"address":"g1ckn395mpttp0vupgtratyufdaakgh8jgkmr3ym","weight":1,"metadata":""},{"id":4,"address":"g1wymu47drhr0kuq2098m792lytgtj2nyx77yrsm","weight":1,"metadata":""},{"id":5,"address":"0x42","weight":1,"metadata":"hello"}]`)
+			expected := fmt.Sprintf(`[{"id":0,"address":"g1747t5m2f08plqjlrjk2q0qld7465hxz8gkx59c","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":1,"address":"g108cszmcvs4r3k67k7h5zuhm4el3qhlrxzhshtv","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":2,"address":"g14u5eaheavy0ux4dmpykg2gvxpvqvexm9cyg58a","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":3,"address":"g1ckn395mpttp0vupgtratyufdaakgh8jgkmr3ym","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":4,"address":"g1wymu47drhr0kuq2098m792lytgtj2nyx77yrsm","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":5,"address":"0x42","weight":1,"metadata":"hello","createdAt":"2009-02-13T23:31:30Z"}]`)
 			if membersJSON != expected {
-				t.Fatalf("Expected %s, got %s", expected, membersJSON)
+				t.Fatalf("Expected:\n%s\nGot:\n%s", expected, membersJSON)
 			}
 		}()
 	}
@@ -69,9 +69,9 @@ func TestUpdateMembers(t *testing.T) {
 		VoteJSON(0, 1, fmt.Sprintf(`{"vote": %d, "rationale": "%s"}`, proposal_single.VoteYes, "testing"))
 		Execute(0, 1)
 		membersJSON = ujson.FormatSlice(groups.GetMembers(groupID))
-		expected := fmt.Sprintf(`[{"id":1,"address":"g108cszmcvs4r3k67k7h5zuhm4el3qhlrxzhshtv","weight":1,"metadata":""},{"id":2,"address":"g14u5eaheavy0ux4dmpykg2gvxpvqvexm9cyg58a","weight":1,"metadata":""},{"id":3,"address":"g1ckn395mpttp0vupgtratyufdaakgh8jgkmr3ym","weight":1,"metadata":""},{"id":4,"address":"g1wymu47drhr0kuq2098m792lytgtj2nyx77yrsm","weight":1,"metadata":""},{"id":5,"address":"0x42","weight":1,"metadata":"hello"}]`)
+		expected := fmt.Sprintf(`[{"id":1,"address":"g108cszmcvs4r3k67k7h5zuhm4el3qhlrxzhshtv","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":2,"address":"g14u5eaheavy0ux4dmpykg2gvxpvqvexm9cyg58a","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":3,"address":"g1ckn395mpttp0vupgtratyufdaakgh8jgkmr3ym","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":4,"address":"g1wymu47drhr0kuq2098m792lytgtj2nyx77yrsm","weight":1,"metadata":"","createdAt":"2009-02-13T23:31:30Z"},{"id":5,"address":"0x42","weight":1,"metadata":"hello","createdAt":"2009-02-13T23:31:30Z"}]`)
 		if membersJSON != expected {
-			t.Fatalf("Expected %s, got %s", expected, membersJSON)
+			t.Fatalf("Expected:\n%s\nGot:\n%s", expected, membersJSON)
 		}
 	}()
 }
@@ -109,7 +109,7 @@ Offensive stuff
 `
 		render := modboards.Render(mainBoardName)
 		if render != expected {
-			t.Fatalf("Expected %s, got `%s`", expected, render)
+			t.Fatalf("Expected:\n%s\nGot:\n%s`", expected, render)
 		}
 	}
 }

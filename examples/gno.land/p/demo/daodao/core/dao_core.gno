@@ -153,8 +153,8 @@ func (d *daoCore) VotingModule() dao_interfaces.IVotingModule {
 	return d.votingModule
 }
 
-func (d *daoCore) VotingPower(address std.Address) uint64 {
-	return d.VotingModule().VotingPower(address)
+func (d *daoCore) VotingPowerAtHeight(address std.Address, height int64) uint64 {
+	return d.VotingModule().VotingPowerAtHeight(address, height)
 }
 
 func (d *daoCore) ActiveProposalModules() {

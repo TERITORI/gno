@@ -30,11 +30,11 @@ func (vm *votingModule) Render(path string) string {
 	return "# Test Voting Module"
 }
 
-func (vm *votingModule) VotingPower(address std.Address) uint64 {
+func (vm *votingModule) VotingPowerAtHeight(address std.Address, height int64) uint64 {
 	return 0
 }
 
-func (vm *votingModule) TotalPower() uint64 {
+func (vm *votingModule) TotalPowerAtHeight(height int64) uint64 {
 	return 0
 }
 

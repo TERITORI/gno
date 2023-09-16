@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gno.land/p/demo/avl"
+	"gno.land/p/demo/havl"
 	"gno.land/p/demo/ujson"
 )
 
@@ -27,11 +28,11 @@ type Group struct {
 	url              string
 	name             string
 	lastMemberID     MemberID
-	members          avl.Tree
-	membersByAddress avl.Tree
+	members          havl.Tree // id -> member
+	membersByAddress havl.Tree // address -> member
 	creator          std.Address
 	createdAt        time.Time
-	totalWeight      int
+	totalWeight      havl.Tree // "" -> int64
 }
 
 func newGroup(url string, name string, creator std.Address) *Group {
@@ -46,16 +47,15 @@ func newGroup(url string, name string, creator std.Address) *Group {
 		url:       url,
 		name:      name,
 		creator:   creator,
-		members:   avl.Tree{},
 		createdAt: time.Now(),
 	}
 }
 
 func (group *Group) newMember(id MemberID, address std.Address, weight int, metadata string) *Member {
-	if group.members.Has(address.String()) {
+	if group.members.Has(address.String(), 0) {
 		panic("this member for this group already exists")
 	}
-	if group.membersByAddress.Has(address.String()) {
+	if group.membersByAddress.Has(address.String(), 0) {
 		panic("this address is already in this group")
 	}
 	return &Member{
@@ -80,19 +80,21 @@ func (group *Group) RenderGroup() string {
 		"Group Creator: " + string(group.creator) + "\n\n" +
 		"Group createdAt: " + group.createdAt.String() + "\n\n" +
 		"Group Last MemberID: " + memberIDKey(group.lastMemberID) + "\n\n" +
-		"Total Weight: " + strconv.Itoa(group.totalWeight) + "\n\n"
+		"Total Weight: " + strconv.Itoa(group.getTotalWeight(0)) + "\n\n"
 
 	str += "Group Members: \n\n"
-	group.members.Iterate("", "", func(key string, value interface{}) bool {
+	group.members.Iterate("", "", 0, func(key string, value interface{}) bool {
 		member := value.(*Member)
 		str += member.getMemberStr()
 		return false
 	})
+
 	return str
 }
 
 func (group *Group) GetMembers() *avl.Tree {
-	return &group.members
+	snapshot, _ := group.members.GetSnapshot(0)
+	return snapshot
 }
 
 func (group *Group) deleteGroup() {
@@ -112,12 +114,29 @@ func (group *Group) deleteMember(mid MemberID) {
 
 	g := getGroup(group.id)
 	midkey := memberIDKey(mid)
-	imember, ok := g.members.Get(midkey)
+	imember, ok := g.members.Get(midkey, 0)
 	if !ok {
 		return
 	}
 	member := imember.(*Member)
 	g.members.Remove(midkey)
 	g.membersByAddress.Remove(member.address.String())
-	group.totalWeight -= member.weight
+	g.addToTotalWeight(-member.weight)
+}
+
+func (group *Group) addToTotalWeight(weight int) {
+	current, ok := group.totalWeight.Get("", 0)
+	if !ok {
+		group.totalWeight.Set("", weight)
+		return
+	}
+	group.totalWeight.Set("", current.(int)+weight)
+}
+
+func (group *Group) getTotalWeight(height int64) int {
+	val, ok := group.totalWeight.Get("", height)
+	if !ok {
+		return 0
+	}
+	return val.(int)
 }

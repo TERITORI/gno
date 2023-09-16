@@ -13,7 +13,7 @@ func TestVotingGroup(t *testing.T) {
 	v := NewVotingGroup(g)
 	var i dao_interfaces.IVotingModule
 	i = v
-	got := i.TotalPower()
+	got := i.TotalPowerAtHeight(0)
 	expected := uint64(0)
 	if got != expected {
 		t.Fatalf("expected %q, got %q.", expected, got)
