@@ -48,7 +48,7 @@ type DAOProposalSingle struct {
 
 	core      dao_interfaces.IDAOCore
 	opts      *DAOProposalSingleOpts
-	proposals []Proposal
+	proposals []*Proposal
 }
 
 func NewDAOProposalSingle(core dao_interfaces.IDAOCore, opts *DAOProposalSingleOpts) *DAOProposalSingle {
@@ -73,25 +73,31 @@ func NewDAOProposalSingle(core dao_interfaces.IDAOCore, opts *DAOProposalSingleO
 	}
 
 	// TODO: support other threshold types
-	threshold := opts.Threshold.ThresholdQuorum
-	if threshold == nil {
-		panic("opts.Threshold must be of type ThresholdQuorum")
-	}
-
-	thresholdPercent := threshold.Threshold.Percent
-	if thresholdPercent == nil {
-		panic("opts.Threshold.Threshold must be of type Percent")
-	}
-	if *thresholdPercent > 10000 {
-		panic("opts.Threshold.Threshold must be <= 100%")
-	}
-
-	quorumPercent := threshold.Quorum.Percent
-	if quorumPercent == nil {
-		panic("opts.Threshold.Quorum must be of type Percent")
-	}
-	if *quorumPercent > 10000 {
-		panic("opts.Threshold.Quorum must be <= 100%")
+	switch opts.Threshold.(type) {
+	case *ThresholdThresholdQuorum:
+		threshold := opts.Threshold.(*ThresholdThresholdQuorum)
+		switch threshold.Threshold.(type) {
+		case *PercentageThresholdMajority:
+			panic("not implemented")
+		case *PercentageThresholdPercent:
+			if *threshold.Threshold.(*PercentageThresholdPercent) > 10000 {
+				panic("opts.Threshold.Threshold must be <= 100%")
+			}
+		default:
+			panic("unknown Threshold type")
+		}
+		switch threshold.Quorum.(type) {
+		case *PercentageThresholdMajority:
+			panic("not implemented")
+		case *PercentageThresholdPercent:
+			if *threshold.Quorum.(*PercentageThresholdPercent) > 10000 {
+				panic("opts.Threshold.Quorum must be <= 100%")
+			}
+		default:
+			panic("unknown PercentageThreshold type")
+		}
+	default:
+		panic("unsupported Threshold type")
 	}
 
 	return &DAOProposalSingle{core: core, opts: opts}
@@ -119,9 +125,13 @@ func (d *DAOProposalSingle) Render(path string) string {
 	}
 
 	thresholdStr := ""
-	if threshold := d.opts.Threshold.ThresholdQuorum; threshold != nil {
-		thresholdStr = "Threshold: " + threshold.Threshold.Percent.String() + "\n\n" +
-			"Quorum: " + threshold.Quorum.Percent.String()
+	switch d.opts.Threshold.(type) {
+	case *ThresholdThresholdQuorum:
+		threshold := d.opts.Threshold.(*ThresholdThresholdQuorum)
+		thresholdStr = "Threshold: " + threshold.Threshold.String() + "\n\n" +
+			"Quorum: " + threshold.Quorum.String()
+	default:
+		panic("unsupported Threshold type")
 	}
 
 	proposalsStr := "## Proposals\n"
@@ -144,22 +154,11 @@ func (d *DAOProposalSingle) Render(path string) string {
 			messagesStr +
 			"#### Votes\n"
 
-		// /* dev
 		p.Ballots.Iterate("", "", func(k string, v interface{}) bool {
 			ballot := v.(Ballot)
 			proposalsStr += "- " + k + " voted " + ballot.Vote.String() + "\n"
 			return false
 		})
-		// */
-
-		/* test3
-		ballotsCount := p.Ballots.Size()
-		for i := 0; i < ballotsCount; i++ {
-			k, v := p.Ballots.GetByIndex(i)
-			ballot := v.(dao_interfaces.Ballot)
-			proposalsStr += "- " + k + " voted " + ballot.Vote.String() + "\n"
-		}
-		*/
 
 		proposalsStr += "\n"
 	}
@@ -175,19 +174,41 @@ func (d *DAOProposalSingle) Render(path string) string {
 		proposalsStr
 }
 
+func (d *DAOProposalSingle) Core() dao_interfaces.IDAOCore {
+	return d.core
+}
+
+func (d *DAOProposalSingle) Info() dao_interfaces.ModuleInfo {
+	return dao_interfaces.ModuleInfo{
+		Kind:    "SingleChoice",
+		Version: "0.1.0",
+	}
+}
+
 func (d *DAOProposalSingle) Propose(title string, description string, messages []dao_interfaces.ExecutableMessage) int {
+	// TODO: creation policy
+
+	totalPower := d.core.VotingModule().TotalPowerAtHeight(0)
+
 	id := len(d.proposals)
-	// TODO: auth
-	d.proposals = append(d.proposals, Proposal{
+
+	prop := Proposal{
 		ID:          id,
 		Title:       title,
 		Description: description,
-		Messages:    messages,
-		Proposer:    std.GetOrigCaller(),
-		Ballots:     avl.NewTree(), // dev
-		// Ballots: avl.NewMutTree(), // test3
-		Status: ProposalStatusOpen,
-	})
+		Proposer:    std.PrevRealm().Addr(),
+		StartHeight: std.GetHeight(),
+		// TODO: min_voting_period
+		// TODO: expiration
+		Threshold:     d.opts.Threshold.Clone(),
+		TotalPower:    totalPower,
+		Messages:      messages,
+		Status:        ProposalStatusOpen,
+		Ballots:       avl.NewTree(),
+		AllowRevoting: d.opts.AllowRevoting,
+	}
+	prop.updateStatus()
+	d.proposals = append(d.proposals, &prop)
 	return id
 }
 
@@ -227,14 +248,14 @@ func (d *DAOProposalSingle) VoteJSON(proposalID int, voteJSON string) {
 	proposal := d.proposals[proposalID]
 	// TODO: check proposal expiration
 
-	votePower := d.core.VotingModule().VotingPowerAtHeight(voter, 0)
+	votePower := d.core.VotingModule().VotingPowerAtHeight(voter, proposal.StartHeight)
 	if votePower == 0 {
-		panic("you're not a member")
+		panic("not registered")
 	}
 
 	// TODO: handle revoting
 	if ok := proposal.Ballots.Has(voter.String()); ok {
-		panic("you already voted")
+		panic("already voted")
 	}
 	proposal.Ballots.Set(voter.String(), Ballot{
 		Vote:      v.Vote,
@@ -244,7 +265,7 @@ func (d *DAOProposalSingle) VoteJSON(proposalID int, voteJSON string) {
 
 	proposal.Votes.Add(v.Vote, votePower)
 
-	d.updateStatus(proposalID)
+	proposal.updateStatus()
 }
 
 func (d *DAOProposalSingle) Execute(proposalID int) {
@@ -255,7 +276,7 @@ func (d *DAOProposalSingle) Execute(proposalID int) {
 	}
 	prop := d.proposals[proposalID]
 
-	d.updateStatus(proposalID)
+	prop.updateStatus()
 	if prop.Status != ProposalStatusPassed {
 		panic("proposal is not passed")
 	}
@@ -264,7 +285,7 @@ func (d *DAOProposalSingle) Execute(proposalID int) {
 		d.core.Registry().Execute(m)
 	}
 
-	d.proposals[proposalID].Status = ProposalStatusExecuted
+	prop.Status = ProposalStatusExecuted
 }
 
 type ProposalRequest struct {
@@ -284,11 +305,11 @@ func (pr *ProposalRequest) FromJSON(ast *ujson.JSONASTNode) {
 func (d *DAOProposalSingle) ProposeJSON(proposalJSON string) int {
 	var req ProposalRequest
 	ujson.ParseAny(proposalJSON, &req)
-	msgs := d.core.Registry().MessagesFromJSON(req.Messages.String())
+	msgs := d.core.Registry().MessagesFromJSON(req.Messages.String()) // TODO: optimize
 	return d.Propose(req.Title, req.Description, msgs)
 }
 
-func (d *DAOProposalSingle) Proposals() []Proposal {
+func (d *DAOProposalSingle) Proposals() []*Proposal {
 	return d.proposals
 }
 
@@ -296,42 +317,63 @@ func (d *DAOProposalSingle) ProposalsJSON(limit int, startAfter string, reverse 
 	return ujson.FormatSlice(d.proposals)
 }
 
+func (d *DAOProposalSingle) ProposalJSON(proposalID int) string {
+	if proposalID < 0 || proposalID >= len(d.proposals) {
+		panic("proposal does not exist")
+	}
+	return ujson.FormatAny(d.proposals[proposalID])
+}
+
 func (d *DAOProposalSingle) Threshold() Threshold {
 	return d.opts.Threshold
 }
 
-func (d *DAOProposalSingle) updateStatus(proposalID int) {
-	proposal := d.proposals[proposalID]
-	if proposal.Status == ProposalStatusOpen && d.isPassed(proposalID) {
-		d.proposals[proposalID].Status = ProposalStatusPassed
+func (proposal *Proposal) updateStatus() {
+	if proposal.Status == ProposalStatusOpen && proposal.isPassed() {
+		proposal.Status = ProposalStatusPassed
 		return
 	}
 }
 
-func (d *DAOProposalSingle) isPassed(proposalID int) bool {
-	proposal := d.proposals[proposalID]
+func (proposal *Proposal) isPassed() bool {
+	switch proposal.Threshold.(type) {
+	case *ThresholdAbsolutePercentage:
+		panic("ThresholdAbsolutePercentage not implemented")
+	case *ThresholdThresholdQuorum:
+		thresholdObj := proposal.Threshold.(*ThresholdThresholdQuorum)
 
-	// TODO: support other threshold types
-	threshold := d.opts.Threshold.ThresholdQuorum.Threshold
-	quorum := d.opts.Threshold.ThresholdQuorum.Quorum
+		threshold := thresholdObj.Threshold
+		quorum := thresholdObj.Quorum
 
-	totalPower := d.core.VotingModule().TotalPowerAtHeight(0)
+		totalPower := proposal.TotalPower
 
-	if !doesVoteCountPass(proposal.Votes.Total(), totalPower, quorum) {
-		return false
+		if !doesVoteCountPass(proposal.Votes.Total(), totalPower, quorum) {
+			return false
+		}
+
+		// TODO: handle expiration
+		options := totalPower - proposal.Votes.Abstain
+		return doesVoteCountPass(proposal.Votes.Yes, options, threshold)
+	case *ThresholdAbsoluteCount:
+		panic("ThresholdAbsoluteCount not implemented")
+	default:
+		panic("unknown Threshold type")
 	}
-
-	// TODO: handle expiration
-	options := totalPower - proposal.Votes.Abstain
-	return doesVoteCountPass(proposal.Votes.Yes, options, threshold)
 }
 
 func doesVoteCountPass(yesVotes uint64, options uint64, percent PercentageThreshold) bool {
-	if options == 0 {
-		return false
+	switch percent.(type) {
+	case *PercentageThresholdMajority:
+		panic("not implemented")
+	case *PercentageThresholdPercent:
+		if options == 0 {
+			return false
+		}
+		percentValue := uint64(*percent.(*PercentageThresholdPercent))
+		votes := yesVotes * 10000
+		threshold := options * percentValue
+		return votes >= threshold
+	default:
+		panic("unknown PercentageThreshold type")
 	}
-	percentValue := uint64(*percent.Percent)
-	votes := yesVotes * 10000
-	threshold := options * percentValue
-	return votes >= threshold
 }

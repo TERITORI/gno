@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gno.land/p/demo/avl"
+	"gno.land/r/demo/users"
 )
 
 // https://stackoverflow.com/a/4150626
@@ -101,6 +102,9 @@ func (ast *JSONASTNode) ParseAny(ptr *interface{}) {
 		*ptr.(**JSONASTNode) = ast
 	case *time.Time:
 		ast.ParseTime(ptr.(*time.Time))
+	case *users.AddressOrName:
+		s := ParseString(ast.Value)
+		*ptr.(*users.AddressOrName) = users.AddressOrName(s)
 	default:
 		if ast.Kind == JSONKindValue && ast.ValueKind == JSONTokenKindNull {
 			*ptr = nil

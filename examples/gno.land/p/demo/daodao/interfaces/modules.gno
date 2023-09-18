@@ -27,10 +27,11 @@ type IProposalModule interface {
 	Core() IDAOCore
 	Info() ModuleInfo
 	Render(path string) string
-	Execute(proposalId int)
+	Execute(proposalID int)
 	VoteJSON(proposalID int, voteJSON string)
 	ProposeJSON(proposalJSON string) int
 	ProposalsJSON(limit int, startAfter string, reverse bool) string
+	ProposalJSON(proposalID int) string
 }
 
 type ProposalModuleFactory func(core IDAOCore) IProposalModule

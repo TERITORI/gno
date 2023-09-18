@@ -34,6 +34,15 @@ func (msg *ExecutableMessageAddMember) String() string {
 	return strings.Join(ss, "\n---\n")
 }
 
+func (msg *ExecutableMessageAddMember) ToJSON() string {
+	return ujson.FormatObject([]ujson.FormatKV{
+		{Key: "groupId", Value: msg.GroupID},
+		{Key: "address", Value: msg.Address},
+		{Key: "weight", Value: msg.Weight},
+		{Key: "metadata", Value: msg.Metadata},
+	})
+}
+
 type AddMemberHandler struct {
 	dao_interfaces.MessageHandler
 }
@@ -79,6 +88,13 @@ func (msg *ExecutableMessageDeleteMember) String() string {
 	s := "GroupID: " + msg.GroupID.String()
 	s += "MemberID: " + msg.MemberID.String()
 	return strings.Join(ss, "\n---\n")
+}
+
+func (msg *ExecutableMessageDeleteMember) ToJSON() string {
+	return ujson.FormatObject([]ujson.FormatKV{
+		{Key: "groupId", Value: msg.GroupID},
+		{Key: "memberId", Value: msg.MemberID},
+	})
 }
 
 type DeleteMemberHandler struct {

@@ -9,13 +9,16 @@ import (
 )
 
 type Tree struct {
-	root avl.Tree // height -> *avl.Tree
+	root          avl.Tree // height -> *avl.Tree
+	initialHeight int64
 }
+
+// FIXME: don't cast height to int
 
 // this is not optimized at all, we make a full copy on write
 
 func NewTree() *Tree {
-	return &Tree{}
+	return &Tree{initialHeight: std.GetHeight()}
 }
 
 func (t *Tree) Size(height int64) int {
@@ -73,12 +76,10 @@ func (t *Tree) ReverseIterateByOffset(offset int, count int, height int64, cb av
 }
 
 func (t *Tree) GetSnapshot(height int64) (*avl.Tree, int64) {
-	if height <= 0 {
-		height = std.GetHeight()
-	}
+	key := getPaddedKey(height)
 	var snapshot *avl.Tree
-	snapshotHeight := 1
-	t.root.ReverseIterate(getPaddedKey(height), "", func(key string, value interface{}) bool {
+	snapshotHeight := int(t.initialHeight)
+	t.root.ReverseIterate("", key, func(key string, value interface{}) bool {
 		snapshot = value.(*avl.Tree)
 		var err error
 		snapshotHeight, err = strconv.Atoi(key)
@@ -96,31 +97,32 @@ func (t *Tree) GetSnapshot(height int64) (*avl.Tree, int64) {
 // utils
 
 func getPaddedKey(height int64) string {
-	if height < 0 {
-		panic("internal error: negative height")
+	if height <= 0 {
+		height = std.GetHeight()
 	}
 	val := strconv.Itoa(int(height))
 	return strings.Repeat("0", len("9223372036854775807")-len(val)) + val
 }
 
-func clone(t *Tree) *Tree {
-	r := Tree{}
-	t.root.Iterate("", "", func(key string, value interface{}) bool {
+func clone(t *avl.Tree) *avl.Tree {
+	r := avl.NewTree()
+	t.Iterate("", "", func(key string, value interface{}) bool {
 		r.Set(key, value)
 		return false
 	})
-	return &r
+	return r
 }
 
 func (t *Tree) getOrCreateCurrentRoot() *avl.Tree {
-	heightKey := getPaddedKey(std.GetHeight())
-	iroot, ok := t.root.Get(heightKey)
+	key := getPaddedKey(0)
+	iroot, ok := t.root.Get(key)
 	var root *avl.Tree
 	if ok {
 		root = iroot.(*avl.Tree)
 	} else {
-		root = avl.NewTree()
-		t.root.Set(heightKey, root)
+		snapshot, _ := t.GetSnapshot(0)
+		root = clone(snapshot)
+		t.root.Set(key, root)
 	}
 	return root
 }

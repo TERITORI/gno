@@ -72,14 +72,45 @@ type Proposal struct {
 	Title       string
 	Description string
 	Proposer    std.Address
-	Messages    []dao_interfaces.ExecutableMessage
-	Ballots     *avl.Tree // dev
-	// Ballots *avl.MutTree // test3
-	Votes  Votes
-	Status ProposalStatus
+	StartHeight int64
+	// TODO: min_voting_period
+	// TODO: expiration
+	Threshold     Threshold
+	TotalPower    uint64
+	Messages      []dao_interfaces.ExecutableMessage
+	Status        ProposalStatus
+	Votes         Votes
+	AllowRevoting bool
+
+	// not in DA0-DA0 implementation:
+
+	Ballots *avl.Tree
 }
 
 var _ ujson.JSONAble = (*Proposal)(nil)
+
+type messageWithType struct {
+	Type    string
+	Message dao_interfaces.ExecutableMessage
+}
+
+func (m *messageWithType) ToJSON() string {
+	return ujson.FormatObject([]ujson.FormatKV{
+		{Key: "type", Value: m.Type},
+		{Key: "payload", Value: m.Message},
+	})
+}
+
+func formatMessages(messages []dao_interfaces.ExecutableMessage) string {
+	var out []*messageWithType
+	for _, m := range messages {
+		out = append(out, &messageWithType{
+			Type:    m.Type(),
+			Message: m,
+		})
+	}
+	return ujson.FormatSlice(out)
+}
 
 func (p Proposal) ToJSON() string {
 	return ujson.FormatObject([]ujson.FormatKV{
@@ -87,10 +118,15 @@ func (p Proposal) ToJSON() string {
 		{Key: "title", Value: p.Title},
 		{Key: "description", Value: p.Description},
 		{Key: "proposer", Value: p.Proposer},
-		{Key: "messages", Value: ujson.FormatSlice(p.Messages), Raw: true},
-		{Key: "ballots", Value: p.Ballots},
-		{Key: "votes", Value: p.Votes},
+		{Key: "startHeight", Value: p.StartHeight},
+		{Key: "threshold", Value: p.Threshold},
+		{Key: "totalPower", Value: p.TotalPower},
+		{Key: "messages", Value: formatMessages(p.Messages), Raw: true},
 		{Key: "status", Value: p.Status},
+		{Key: "votes", Value: p.Votes},
+		{Key: "allowRevoting", Value: p.AllowRevoting},
+
+		{Key: "ballots", Value: p.Ballots},
 	})
 }
 

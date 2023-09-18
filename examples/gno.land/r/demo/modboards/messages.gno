@@ -19,7 +19,7 @@ type ExecutableMessageCreateBoard struct {
 }
 
 func (msg *ExecutableMessageCreateBoard) Type() string {
-	return "CreateBoard"
+	return "gno.land/r/demo/modboards.CreateBoard"
 }
 
 func (msg *ExecutableMessageCreateBoard) String() string {
@@ -27,6 +27,12 @@ func (msg *ExecutableMessageCreateBoard) String() string {
 	ss = append(ss, msg.Type())
 	ss = append(ss, "Name: "+msg.Name)
 	return strings.Join(ss, "\n---\n")
+}
+
+func (msg *ExecutableMessageCreateBoard) ToJSON() string {
+	return ujson.FormatObject([]ujson.FormatKV{
+		{Key: "name", Value: msg.Name},
+	})
 }
 
 type CreateBoardHandler struct {
@@ -103,6 +109,15 @@ func (msg *ExecutableMessageDeletePost) String() string {
 	ss = append(ss, s)
 
 	return strings.Join(ss, "\n---\n")
+}
+
+func (msg *ExecutableMessageDeletePost) ToJSON() string {
+	return ujson.FormatObject([]ujson.FormatKV{
+		{Key: "boardId", Value: msg.BoardID},
+		{Key: "threadId", Value: msg.ThreadID},
+		{Key: "postId", Value: msg.PostID},
+		{Key: "reason", Value: msg.Reason},
+	})
 }
 
 type DeletePostHandler struct {

@@ -77,6 +77,10 @@ func (pm *proposalModule) ProposalsJSON(limit int, startAfter string, reverse bo
 	panic("not implemented")
 }
 
+func (pm *proposalModule) ProposalJSON(proposalID int) string {
+	panic("not implemented")
+}
+
 func TestDAOCore(t *testing.T) {
 	var testValue string
 	handler := dao_interfaces.NewCopyMessageHandler(&testValue)

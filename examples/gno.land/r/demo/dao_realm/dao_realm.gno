@@ -11,8 +11,10 @@ import (
 	proposal_single "gno.land/p/demo/daodao/proposal_single"
 	voting_group "gno.land/p/demo/daodao/voting_group"
 	"gno.land/p/demo/ujson"
+	registry "gno.land/r/demo/dao_registry"
 	"gno.land/r/demo/groups"
 	modboards "gno.land/r/demo/modboards"
+	"gno.land/r/demo/tori"
 )
 
 var (
@@ -39,14 +41,14 @@ func init() {
 
 	proposalModulesFactories := []dao_interfaces.ProposalModuleFactory{
 		func(core dao_interfaces.IDAOCore) dao_interfaces.IProposalModule {
-			tt := proposal_single.Percent(100) // 1%
-			tq := proposal_single.Percent(100) // 1%
+			tt := proposal_single.PercentageThresholdPercent(100)
+			tq := proposal_single.PercentageThresholdPercent(100)
 			return proposal_single.NewDAOProposalSingle(core, &proposal_single.DAOProposalSingleOpts{
 				MaxVotingPeriod: time.Hour * 24 * 42,
-				Threshold: proposal_single.Threshold{ThresholdQuorum: &proposal_single.ThresholdQuorum{
-					Threshold: proposal_single.PercentageThreshold{Percent: &tt},
-					Quorum:    proposal_single.PercentageThreshold{Percent: &tq},
-				}},
+				Threshold: &proposal_single.ThresholdThresholdQuorum{
+					Threshold: &tt, // 1%
+					Quorum:    &tq, // 1%
+				},
 			})
 		},
 	}
@@ -69,9 +71,14 @@ func init() {
 		func(core dao_interfaces.IDAOCore) dao_interfaces.MessageHandler {
 			return modboards.NewDeletePostHandler()
 		},
+		func(core dao_interfaces.IDAOCore) dao_interfaces.MessageHandler {
+			return tori.NewMintToriHandler()
+		},
 	}
 
 	daoCore = dao_core.NewDAOCore(votingModuleFactory, proposalModulesFactories, messageHandlersFactories)
+
+	registry.Register("DAO Realm", "Default testing DAO", "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1080&fit=max")
 }
 
 func Render(path string) string {
@@ -96,17 +103,23 @@ func Execute(moduleIndex int, proposalID int) {
 	module.Module.Execute(proposalID)
 }
 
-func ProposeJSON(moduleIndex int, proposalJSON string) {
+func ProposeJSON(moduleIndex int, proposalJSON string) int {
 	// move check in dao core
 	module := dao_core.GetProposalModule(daoCore, moduleIndex)
 	if !module.Enabled {
 		panic("proposal module is not enabled")
 	}
-	module.Module.ProposeJSON(proposalJSON)
+	return module.Module.ProposeJSON(proposalJSON)
 }
 
 func getProposalsJSON(moduleIndex int, limit int, startAfter string, reverse bool) string {
 	// move logic in dao core
 	module := dao_core.GetProposalModule(daoCore, moduleIndex)
 	return module.Module.ProposalsJSON(limit, startAfter, reverse)
+}
+
+func getProposalJSON(moduleIndex int, proposalIndex int) string {
+	// move logic in dao core
+	module := dao_core.GetProposalModule(daoCore, moduleIndex)
+	return module.Module.ProposalJSON(proposalIndex)
 }

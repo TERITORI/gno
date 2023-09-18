@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"gno.land/p/demo/daodao/interfaces"
+	"gno.land/p/demo/ujson"
 	"gno.land/r/demo/users"
 )
 
@@ -18,7 +19,7 @@ type ExecutableMessageMintTori struct {
 }
 
 func (msg *ExecutableMessageMintTori) Type() string {
-	return "MintTori"
+	return "gno.land/r/demo/tori.Mint"
 }
 
 func (msg *ExecutableMessageMintTori) String() string {
@@ -28,6 +29,20 @@ func (msg *ExecutableMessageMintTori) String() string {
 	s += "Amount: " + strconv.FormatUint(msg.Amount, 10)
 	ss = append(ss, s)
 	return strings.Join(ss, "\n---\n")
+}
+
+func (msg *ExecutableMessageMintTori) FromJSON(ast *ujson.JSONASTNode) {
+	ast.ParseObject([]*ujson.ParseKV{
+		{Key: "address", Value: &msg.Address},
+		{Key: "amount", Value: &msg.Amount},
+	})
+}
+
+func (msg *ExecutableMessageMintTori) ToJSON() string {
+	return ujson.FormatObject([]ujson.FormatKV{
+		{Key: "address", Value: msg.Address},
+		{Key: "amount", Value: msg.Amount},
+	})
 }
 
 type MintToriHandler struct {
@@ -46,6 +61,14 @@ func (h *MintToriHandler) Execute(imsg dao_interfaces.ExecutableMessage) {
 func (h *MintToriHandler) Type() string {
 	return ExecutableMessageMintTori{}.Type()
 }
+
+func (h *MintToriHandler) MessageFromJSON(ast *ujson.JSONASTNode) dao_interfaces.ExecutableMessage {
+	msg := &ExecutableMessageMintTori{}
+	msg.FromJSON(ast)
+	return msg
+}
+
+// TODO: JSON
 
 type ExecutableMessageBurnTori struct {
 	dao_interfaces.ExecutableMessage
