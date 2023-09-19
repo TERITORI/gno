@@ -19,8 +19,8 @@ gnokey maketx addpkg  \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgdir="./r/justicedao" \
-  -pkgpath="gno.land/r/demo/justicedao_05" \
+  -pkgdir="./r/demo/justicedao" \
+  -pkgpath="gno.land/r/demo/justicedao_10" \
   teritori
 
 # Create DAO
@@ -30,7 +30,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/justicedao_05" \
+  -pkgpath="gno.land/r/demo/justicedao_10" \
   -func="CreateDAO" \
   -args="https://gnodao1.org" \
   -args="https://metadata.gnodao1.org" \
@@ -50,10 +50,11 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/justicedao_05" \
+  -pkgpath="gno.land/r/demo/justicedao_10" \
   -func="CreateJusticeProposal" \
   -args="First Justice DAO proposal" \
   -args="First Justice DAO proposal summary" \
+  -args="1" \
   teritori
 
 # Fulfill Random Words on VRF
@@ -65,7 +66,7 @@ gnokey maketx call \
   -chainid="teritori-1" \
   -pkgpath="gno.land/r/demo/vrf_08" \
   -func="FulfillRandomWords" \
-  -args="4" \
+  -args="7" \
   -args="f440c4980357d8b56db87ddd50f06bd551f1319b" \
   teritori
 
@@ -76,7 +77,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/justicedao_05" \
+  -pkgpath="gno.land/r/demo/justicedao_10" \
   -func="DetermineJusticeDAOMembers" \
   -args="0" \
   teritori
@@ -88,9 +89,10 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/justicedao_05" \
+  -pkgpath="gno.land/r/demo/justicedao_10" \
   -func="ProposeJusticeDAOSolution" \
   -args="0" \
+  -args="50" \
   -args="Split 50:50" \
   teritori
 
@@ -101,7 +103,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/justicedao_05" \
+  -pkgpath="gno.land/r/demo/justicedao_10" \
   -func="VoteJusticeSolutionProposal" \
   -args="0" \
   -args="0" \
@@ -114,7 +116,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/justicedao_05" \
+  -pkgpath="gno.land/r/demo/justicedao_10" \
   -func="TallyAndExecuteJusticeSolution" \
   -args="0" \
   teritori
@@ -126,7 +128,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/justicedao_05" \
+  -pkgpath="gno.land/r/demo/justicedao_10" \
   -func="CreateProposal" \
   -args="First proposal" \
   -args="First proposal summary" \
@@ -139,19 +141,19 @@ gnokey maketx call \
   teritori
 
 # Query proposal
-gnokey query "vm/qeval" -data="gno.land/r/demo/justicedao_05
+gnokey query "vm/qeval" -data="gno.land/r/demo/justicedao_10
 RenderProposal(0)" -remote="51.15.236.215:26657"
 
 # Render Juste DAO Proposal
-gnokey query "vm/qeval" -data="gno.land/r/demo/justicedao_05
+gnokey query "vm/qeval" -data="gno.land/r/demo/justicedao_10
 RenderJusticeDAOProposal(0)" -remote="51.15.236.215:26657"
 
 # Render Justice DAO Proposals
-gnokey query "vm/qeval" -data="gno.land/r/demo/justicedao_05
+gnokey query "vm/qeval" -data="gno.land/r/demo/justicedao_10
 RenderJusticeDAOProposals(0, 1)" -remote="51.15.236.215:26657"
 
-gnokey query "vm/qeval" -data="gno.land/r/demo/justicedao_05
+gnokey query "vm/qeval" -data="gno.land/r/demo/justicedao_10
 GetDAOMembers()" -remote="51.15.236.215:26657"
 
-gnokey query "vm/qeval" -data="gno.land/r/demo/justicedao_05
+gnokey query "vm/qeval" -data="gno.land/r/demo/justicedao_10
 RenderDAOMembers(\"\",\"\")" -remote="51.15.236.215:26657"
