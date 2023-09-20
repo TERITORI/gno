@@ -159,6 +159,10 @@ func parseVotingPowers(daoMembers, votingPowers string) []VotingPower {
 	return parsedVPs
 }
 
+func CurrentRealm() string {
+	return std.CurrentRealm().Addr().String()
+}
+
 // GNODAO FUNCTIONS
 func CreateDAO(
 	uri string,
