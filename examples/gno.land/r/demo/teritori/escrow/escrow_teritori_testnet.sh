@@ -30,8 +30,8 @@ gnokey maketx addpkg  \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgdir="./r/escrow" \
-  -pkgpath="gno.land/r/demo/escrow_05" \
+  -pkgdir="./escrow" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
   teritori
 
 # Set config
@@ -41,7 +41,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/escrow_05" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
   -func="UpdateConfig" \
   -args="g1c5y8jpe585uezcvlmgdjmk5jt2glfw88wxa3xq" \
   teritori
@@ -53,12 +53,15 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/escrow_05" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
   -func="CreateContract" \
   -args="g1c5y8jpe585uezcvlmgdjmk5jt2glfw88wxa3xq" \
+  -args="$TERITORI" \
   -args="gopher20" \
-  -args="100" \
   -args="60" \
+  -args="Milestone1,Milestone2" \
+  -args="10,15" \
+  -args="86400,86400" \
   teritori
 
 # Cancel Contract
@@ -68,7 +71,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/escrow_05" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
   -func="CancelContract" \
   -args="0" \
   teritori
@@ -80,9 +83,9 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/escrow_05" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
   -func="AcceptContract" \
-  -args="1" \
+  -args="0" \
   gopher2
 
 # Pause Contract
@@ -92,7 +95,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/escrow_05" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
   -func="PauseContract" \
   -args="0" \
   teritori
@@ -104,9 +107,86 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/escrow_05" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
   -func="CompleteContract" \
+  -args="0" \
+  teritori
+
+# Resume Contract
+gnokey maketx call \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
+  -func="ResumeContract" \
   -args="1" \
+  teritori
+
+# Pay partial amount of milestone
+gnokey maketx call \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
+  -func="PayActiveMilestone" \
+  -args="0" \
+  -args="5" \
+  teritori
+
+# Pay and complete active milestone
+gnokey maketx call \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
+  -func="PayAndCompleteActiveMilestone" \
+  -args="0" \
+  teritori
+
+# Fund active milestone - Start milestone
+gnokey maketx call \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
+  -func="StartMilestone" \
+  -args="0" \
+  teritori
+
+# Add upcoming milestone
+gnokey maketx call \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
+  -func="AddUpcomingMilestone" \
+  -args="0" \
+  -args="Milestone3" \
+  -args="20" \
+  -args="86400" \
+  teritori
+
+# Cancel Upcoming Milestone
+gnokey maketx call \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
+  -func="CancelUpcomingMilestone" \
+  -args="0" \
+  -args="3" \
   teritori
 
 # Complete Contract by DAO
@@ -116,7 +196,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/escrow_05" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
   -func="CompleteContractByDAO" \
   -args="0" \
   -args="50" \
@@ -129,26 +209,26 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/escrow_05" \
+  -pkgpath="gno.land/r/demo/escrow_09" \
   -func="GiveFeedback" \
   -args="0" \
   -args="Amazing work" \
   teritori
 
 # Query Contracts
-gnokey query "vm/qeval" -data="gno.land/r/demo/escrow_05
+gnokey query "vm/qeval" -data="gno.land/r/demo/escrow_09
 RenderContracts(0, 10)" -remote="51.15.236.215:26657"
 
 # Query contract
-gnokey query "vm/qeval" -data="gno.land/r/demo/escrow_05
+gnokey query "vm/qeval" -data="gno.land/r/demo/escrow_09
 RenderContract(0)" -remote="51.15.236.215:26657"
 
 # Query config
-gnokey query "vm/qeval" -data="gno.land/r/demo/escrow_05
+gnokey query "vm/qeval" -data="gno.land/r/demo/escrow_09
 RenderConfig()" -remote="51.15.236.215:26657"
 
 # Query escrow address
-gnokey query "vm/qeval" -data="gno.land/r/demo/escrow_05
+gnokey query "vm/qeval" -data="gno.land/r/demo/escrow_09
 CurrentRealm()" -remote="51.15.236.215:26657"
 
 

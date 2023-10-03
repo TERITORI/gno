@@ -2,7 +2,7 @@ package escrow
 
 import (
 	fmt "gno.land/p/demo/ufmt"
-	"gno.land/r/demo/foo20"
+	"gno.land/r/demo/gopher20"
 	"gno.land/r/demo/users"
 	"std"
 	"strconv"
@@ -168,7 +168,7 @@ func AcceptContract(contractId uint64) {
 		panic("contract already expired")
 	}
 
-	if contract.sender != caller.String() {
+	if contract.sender == caller.String() {
 		panic("contract sender is not able to accept the contract")
 	}
 
@@ -239,7 +239,7 @@ func PayActiveMilestone(contractId uint64, amount uint64) {
 		panic("could not pay more than milestone amount")
 	}
 
-	foo20.Transfer(
+	gopher20.Transfer(
 		users.AddressOrName(contract.contractor),
 		amount)
 	contracts[contractId].milestones[milestoneId].paid += amount
@@ -265,7 +265,7 @@ func PayAndCompleteActiveMilestone(contractId uint64) {
 	milestone := contract.milestones[milestoneId]
 	unpaid := milestone.amount - milestone.paid
 	if unpaid > 0 {
-		foo20.Transfer(
+		gopher20.Transfer(
 			users.AddressOrName(contract.contractor),
 			unpaid)
 		contracts[contractId].milestones[milestoneId].paid += unpaid
@@ -297,7 +297,7 @@ func StartMilestone(contractId uint64) {
 	if milestone.funded {
 		panic("milestone already funded")
 	}
-	foo20.TransferFrom(
+	gopher20.TransferFrom(
 		users.AddressOrName(caller.String()),
 		users.AddressOrName(std.CurrentRealm().Addr().String()),
 		milestone.amount)
@@ -320,6 +320,10 @@ func AddUpcomingMilestone(
 		panic("only contract participants can add upcoming milestone")
 	}
 
+	if contract.status == COMPLETED {
+		panic("milestone can not be modified on completed contract")
+	}
+
 	contracts[contractId].milestones = append(contracts[contractId].milestones, Milestone{
 		title:    title,
 		amount:   amount,
@@ -340,6 +344,10 @@ func CancelUpcomingMilestone(contractId uint64, milestoneId uint64) {
 		panic("only contract participants can cancel upcoming milestone")
 	}
 
+	if contract.status == COMPLETED {
+		panic("milestone can not be modified on completed contract")
+	}
+
 	milestones := contract.milestones
 	if len(milestones) <= int(milestoneId) {
 		panic("milestone is not valid")
@@ -348,7 +356,7 @@ func CancelUpcomingMilestone(contractId uint64, milestoneId uint64) {
 	if milestone.funded {
 		panic("cannot cancel funded milestone")
 	}
-	contract.milestones = append(milestones[:milestoneId], milestones[milestoneId+1:]...)
+	contracts[contractId].milestones = append(milestones[:milestoneId], milestones[milestoneId+1:]...)
 }
 
 func CompleteContract(contractId uint64) {
@@ -403,10 +411,10 @@ func CompleteContractByDAO(contractId uint64, sellerAmount uint64) {
 
 	clientAmount := unpaidAmount - sellerAmount
 
-	foo20.Transfer(
+	gopher20.Transfer(
 		users.AddressOrName(contract.contractor),
 		sellerAmount)
-	foo20.Transfer(
+	gopher20.Transfer(
 		users.AddressOrName(contract.funder),
 		clientAmount)
 	contracts[contractId].activeMilestone += 1
