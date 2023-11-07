@@ -10,10 +10,6 @@ import (
 	"time"
 )
 
-type Config struct {
-	daoAdmin string
-}
-
 type ContractStatus uint32
 
 const (
@@ -24,6 +20,22 @@ const (
 	COMPLETED ContractStatus = 5
 )
 
+func (x ContractStatus) String() string {
+	switch x {
+	case CREATED:
+		return "CREATED"
+	case ACCEPTED:
+		return "ACCEPTED"
+	case CANCELED:
+		return "CANCELED"
+	case PAUSED:
+		return "PAUSED"
+	case COMPLETED:
+		return "COMPLETED"
+	}
+	return "UNKNOWN"
+}
+
 type Milestone struct {
 	title    string
 	amount   uint64
@@ -33,37 +45,25 @@ type Milestone struct {
 }
 
 type Contract struct {
-	id              uint64
-	sender          string
-	contractor      string
-	funder          string // funder address
-	escrowToken     string // grc20 token
-	status          ContractStatus
-	expireAt        uint64
-	clientFeedback  string
-	sellerFeedback  string
-	milestones      []Milestone
-	activeMilestone uint64
-	pausedBy        string
+	id               uint64
+	sender           string
+	contractor       string
+	funder           string // funder address
+	escrowToken      string // grc20 token
+	status           ContractStatus
+	expireAt         uint64
+	funderFeedback   string
+	contractorFeedback   string
+	milestones       []Milestone
+	activeMilestone  uint64
+	pausedBy         string
+	conflictHandler  string // can be a realm path or a caller address
+	handlerCandidate string // conflict handler candidate suggested by one party
+	handlerSuggestor string // the suggestor off the conflict handler candidate
 }
 
-// GNODAO STATE
-var config Config
+// Escrow State
 var contracts []Contract
-
-// GNODAO FUNCTIONS
-func UpdateConfig(daoAdmin string) {
-	if config.daoAdmin == "" {
-		config.daoAdmin = daoAdmin
-		return
-	}
-	caller := std.GetOrigCaller()
-	if config.daoAdmin != caller.String() {
-		panic("not allowed to update daoAdmin")
-	}
-
-	config.daoAdmin = daoAdmin
-}
 
 func CurrentRealm() string {
 	return std.CurrentRealm().Addr().String()
@@ -77,6 +77,7 @@ func CreateContract(
 	milestoneTitles string,
 	milestoneAmounts string,
 	milestoneDurations string,
+	conflictHandler string,
 ) {
 	caller := std.GetOrigCaller()
 	if expiryDuration == 0 {
@@ -84,6 +85,14 @@ func CreateContract(
 	}
 	if escrowToken == "" {
 		panic("invalid escrow token")
+	}
+
+	if contractor == "" {
+		panic("contractor should not be empty")
+	}
+
+	if funder == "" {
+		panic("funder should not be empty")
 	}
 
 	if contractor != caller.String() && funder != caller.String() {
@@ -132,6 +141,7 @@ func CreateContract(
 		expireAt:        uint64(time.Now().Unix()) + expiryDuration,
 		milestones:      milestones,
 		activeMilestone: 0,
+		conflictHandler: conflictHandler,
 	})
 }
 
@@ -226,7 +236,7 @@ func PayActiveMilestone(contractId uint64, amount uint64) {
 		panic("only contract funder can pay the milestone")
 	}
 
-	if contract.status == CREATED {
+	if contract.status == CREATED || contract.status == CANCELED {
 		panic("cannot pay on not accepted contract")
 	}
 
@@ -257,7 +267,7 @@ func PayAndCompleteActiveMilestone(contractId uint64) {
 		panic("only contract funder can pay the milestone")
 	}
 
-	if contract.status == CREATED {
+	if contract.status == CREATED || contract.status == CANCELED {
 		panic("cannot pay on not accepted contract")
 	}
 
@@ -383,7 +393,47 @@ func CompleteContract(contractId uint64) {
 	contracts[contractId].status = COMPLETED
 }
 
-func CompleteContractByDAO(contractId uint64, sellerAmount uint64) {
+func SuggestConflictHandler(contractId uint64, conflictHandler string) {
+	caller := std.GetOrigCaller()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+	if contract.funder != caller.String() && contract.contractor != caller.String() {
+		panic("only contract participants can suggest conflict handler")
+	}
+
+	if contract.conflictHandler == conflictHandler {
+		panic("same contract handler is already set")
+	}
+
+	contracts[contractId].handlerCandidate = conflictHandler
+	contracts[contractId].handlerSuggestor = caller.String()
+}
+
+func ApproveConflictHandler(contractId uint64, conflictHandler string) {
+	caller := std.GetOrigCaller()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+	if contract.funder != caller.String() && contract.contractor != caller.String() {
+		panic("only a contract participant can approve conflict handler")
+	}
+
+	if contract.handlerSuggestor == caller.String() {
+		panic("conflict handler suggestor cannot approve suggested handler")
+	}
+
+	if contract.handlerCandidate != conflictHandler {
+		panic("handlerCandidate is different from approving handler")
+	}
+	contracts[contractId].conflictHandler = conflictHandler
+}
+
+func CompleteContractByConflictHandler(contractId uint64, contractorAmount uint64) {
 	caller := std.GetOrigCaller()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
@@ -394,8 +444,9 @@ func CompleteContractByDAO(contractId uint64, sellerAmount uint64) {
 		panic("contract can only be processed by DAO at PAUSED status")
 	}
 
-	if config.daoAdmin != caller.String() {
-		panic("only dao admin is allowed for this operation")
+	if contract.conflictHandler != caller.String() &&
+		contract.conflictHandler != std.PrevRealm().PkgPath() {
+		panic("only conflictHandler is allowed for this operation")
 	}
 
 	milestones := contract.milestones
@@ -409,14 +460,14 @@ func CompleteContractByDAO(contractId uint64, sellerAmount uint64) {
 	}
 	unpaidAmount := milestone.amount - milestone.paid
 
-	clientAmount := unpaidAmount - sellerAmount
+	funderAmount := unpaidAmount - contractorAmount
 
 	gopher20.Transfer(
 		users.AddressOrName(contract.contractor),
-		sellerAmount)
+		contractorAmount)
 	gopher20.Transfer(
 		users.AddressOrName(contract.funder),
-		clientAmount)
+		funderAmount)
 	contracts[contractId].activeMilestone += 1
 	contracts[contractId].status = COMPLETED
 }
@@ -433,9 +484,9 @@ func GiveFeedback(contractId uint64, feedback string) {
 	}
 
 	if contract.funder == caller.String() {
-		contracts[contractId].clientFeedback = feedback
+		contracts[contractId].funderFeedback = feedback
 	} else if contract.contractor == caller.String() {
-		contracts[contractId].sellerFeedback = feedback
+		contracts[contractId].contractorFeedback = feedback
 	} else {
 		panic("only contract participants can leave feedback")
 	}
@@ -447,12 +498,6 @@ func GetContracts(startAfter, limit uint64) []Contract {
 		max = startAfter + limit
 	}
 	return contracts[startAfter:max]
-}
-
-func RenderConfig() string {
-	return fmt.Sprintf(`{
-		"daoAdmin": "%s"
-}`, config.daoAdmin)
 }
 
 func RenderContract(contractId uint64) string {
@@ -480,14 +525,20 @@ func RenderContract(contractId uint64) string {
 		"contractor": "%s",
 		"funder": "%s",
 		"escrowToken": "%s",
-		"status": %d,
+		"status": "%s",
 		"expireAt": %d,
-		"clientFeedback": "%s",
-		"sellerFeedback": "%s",
+		"funderFeedback": "%s",
+		"contractorFeedback": "%s",
 		"milestones": [%s],
 		"activeMilestone": %d,
-		"pausedBy": "%s"
-}`, c.id, c.sender, c.contractor, c.funder, c.escrowToken, int(c.status), c.expireAt, c.clientFeedback, c.sellerFeedback, milestonesText, c.activeMilestone, c.pausedBy)
+		"pausedBy": "%s",
+		"conflictHandler": "%s",
+		"handlerCandidate": "%s",
+		"handlerSuggestor": "%s"
+}`, c.id, c.sender, c.contractor, c.funder, c.escrowToken, c.status.String(),
+		c.expireAt, c.funderFeedback, c.contractorFeedback,
+		milestonesText, c.activeMilestone, c.pausedBy,
+		c.conflictHandler, c.handlerCandidate, c.handlerSuggestor)
 }
 
 func RenderContracts(startAfter uint64, limit uint64) string {

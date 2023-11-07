@@ -682,7 +682,7 @@ func TallyAndExecuteJusticeSolution(proposalId uint64) {
 	// If more than 2/3 votes Yes, let it pass
 	if numYesVotes > 0 && numYesVotes*3 >= uint64(len(proposal.governers))*2 {
 		justiceProposals[proposalId].status = PASSED
-		escrow.CompleteContractByDAO(proposal.contractId, proposal.sellerAmount)
+		escrow.CompleteContractByConflictHandler(proposal.contractId, proposal.sellerAmount)
 	} else {
 		justiceProposals[proposalId].status = REJECTED
 	}

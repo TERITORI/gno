@@ -22,18 +22,6 @@ gnokey maketx addpkg  \
   -pkgpath="gno.land/r/demo/escrow_03" \
   gopher
 
-# Set config
-gnokey maketx call \
-  -gas-fee="1ugnot" \
-  -gas-wanted="5000000" \
-  -broadcast="true" \
-  -remote="test3.gno.land:36657" \
-  -chainid="test3" \
-  -pkgpath="gno.land/r/demo/escrow_03" \
-  -func="UpdateConfig" \
-  -args="g1c5y8jpe585uezcvlmgdjmk5jt2glfw88wxa3xq" \
-  gopher
-
 # Create Contract
 gnokey maketx call \
   -gas-fee="1ugnot" \
@@ -105,7 +93,7 @@ gnokey maketx call \
   -remote="test3.gno.land:36657" \
   -chainid="test3" \
   -pkgpath="gno.land/r/demo/escrow_03" \
-  -func="CompleteContractByDAO" \
+  -func="CompleteContractByConflictHandler" \
   -args="0" \
   -args="50" \
   gopher
