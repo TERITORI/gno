@@ -93,18 +93,18 @@ type Proposal struct {
 }
 
 type JusticeProposal struct {
-	id           uint64         // unique id assigned for each proposal
-	title        string         // proposal title
-	summary      string         // proposal summary
-	vrfId        uint64         // the vrf request id being used to determine governers
-	governers    []string       // the governers of the proposal
-	contractId   uint64         // the escrow contract id to resolve
-	sellerAmount uint64         // the seller amount determined by Justice DAO
-	solution     string         // proposed result of justice DAO proposal
-	submitTime   uint64         // solution submission time
-	voteEndTime  uint64         // vote end time for the proposal
-	status       ProposalStatus // StatusNil | StatusVotingPeriod | StatusPassed | StatusRejected | StatusFailed
-	votes        []Vote
+	id               uint64         // unique id assigned for each proposal
+	title            string         // proposal title
+	summary          string         // proposal summary
+	vrfId            uint64         // the vrf request id being used to determine governers
+	governers        []string       // the governers of the proposal
+	contractId       uint64         // the escrow contract id to resolve
+	contractorAmount uint64         // the seller amount determined by Justice DAO
+	solution         string         // proposed result of justice DAO proposal
+	submitTime       uint64         // solution submission time
+	voteEndTime      uint64         // vote end time for the proposal
+	status           ProposalStatus // StatusNil | StatusVotingPeriod | StatusPassed | StatusRejected | StatusFailed
+	votes            []Vote
 }
 
 // GNODAO STATE
@@ -557,17 +557,17 @@ func CreateJusticeProposal(
 ) {
 	reqId := vrf.RequestRandomWords(1)
 	justiceProposals = append(justiceProposals, JusticeProposal{
-		id:           uint64(len(justiceProposals)),
-		title:        title,
-		summary:      summary,
-		vrfId:        reqId,
-		governers:    []string{},
-		solution:     "",
-		voteEndTime:  0,
-		status:       NIL,
-		votes:        []Vote{},
-		contractId:   contractId,
-		sellerAmount: 0,
+		id:               uint64(len(justiceProposals)),
+		title:            title,
+		summary:          summary,
+		vrfId:            reqId,
+		governers:        []string{},
+		solution:         "",
+		voteEndTime:      0,
+		status:           NIL,
+		votes:            []Vote{},
+		contractId:       contractId,
+		contractorAmount: 0,
 	})
 }
 
@@ -602,12 +602,12 @@ func DetermineJusticeDAOMembers(id uint64) {
 	}
 }
 
-func ProposeJusticeDAOSolution(id uint64, sellerAmount uint64, solution string) {
+func ProposeJusticeDAOSolution(id uint64, contractorAmount uint64, solution string) {
 	if int(id) >= len(justiceProposals) {
 		panic("invalid justice DAO proposal id")
 	}
 
-	justiceProposals[id].sellerAmount = sellerAmount
+	justiceProposals[id].contractorAmount = contractorAmount
 	justiceProposals[id].solution = solution
 	justiceProposals[id].submitTime = uint64(time.Now().Unix())
 	justiceProposals[id].voteEndTime = uint64(time.Now().Unix()) + dao.votingPeriod
@@ -685,7 +685,7 @@ func TallyAndExecuteJusticeSolution(proposalId uint64) {
 	// If more than 2/3 votes Yes, let it pass
 	if numYesVotes > 0 && numYesVotes*3 >= uint64(len(proposal.governers))*2 {
 		justiceProposals[proposalId].status = PASSED
-		escrow.CompleteContractByConflictHandler(proposal.contractId, proposal.sellerAmount)
+		escrow.CompleteContractByConflictHandler(proposal.contractId, proposal.contractorAmount)
 	} else {
 		justiceProposals[proposalId].status = REJECTED
 	}

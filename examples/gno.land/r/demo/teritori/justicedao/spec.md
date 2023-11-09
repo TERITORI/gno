@@ -77,7 +77,7 @@ type JusticeProposal struct {
 	vrfId        uint64         // the vrf request id being used to determine governers
 	governers    []string       // the governers of the proposal
 	contractId   uint64         // the escrow contract id to resolve
-	sellerAmount uint64         // the seller amount determined by Justice DAO
+	contractorAmount uint64         // the seller amount determined by Justice DAO
 	solution     string         // proposed result of justice DAO proposal
 	submitTime   uint64         // solution submission time
 	voteEndTime  uint64         // vote end time for the proposal

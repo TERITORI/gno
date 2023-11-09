@@ -4,6 +4,6 @@ import (
 	escrow "gno.land/r/demo/escrow_12"
 )
 
-func HandleConflict(contractId uint64, sellerAmount uint64) {
-	escrow.CompleteContractByConflictHandler(contractId, sellerAmount)
+func HandleConflict(contractId uint64, contractorAmount uint64) {
+	escrow.CompleteContractByConflictHandler(contractId, contractorAmount)
 }
