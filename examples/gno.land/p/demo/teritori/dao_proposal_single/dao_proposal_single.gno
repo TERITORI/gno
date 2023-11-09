@@ -3,10 +3,10 @@ package dao_proposal_single
 import (
 	"std"
 	"strconv"
-	"time"
 
 	"gno.land/p/demo/avl"
-	dao_interfaces "gno.land/p/demo/teritori/dao_interfaces"
+	"gno.land/p/demo/teritori/dao_interfaces"
+	"gno.land/p/demo/teritori/dao_utils"
 	"gno.land/p/demo/teritori/ujson"
 )
 
@@ -15,13 +15,13 @@ type DAOProposalSingleOpts struct {
 	Threshold Threshold
 	/// The default maximum amount of time a proposal may be voted on
 	/// before expiring.
-	MaxVotingPeriod time.Duration
+	MaxVotingPeriod dao_utils.Duration
 	/// The minimum amount of time a proposal must be open before
 	/// passing. A proposal may fail before this amount of time has
 	/// elapsed, but it will not pass. This can be useful for
 	/// preventing governance attacks wherein an attacker aquires a
 	/// large number of tokens and forces a proposal through.
-	MinVotingPeriod time.Duration // 0 means no minimum
+	MinVotingPeriod dao_utils.Duration // 0 means no minimum
 	/// If set to true only members may execute passed
 	/// proposals. Otherwise, any address may execute a passed
 	/// proposal.
@@ -83,6 +83,10 @@ func NewDAOProposalSingle(core dao_interfaces.IDAOCore, opts *DAOProposalSingleO
 		panic("close proposal on execution failure not implemented")
 	}
 
+	if opts.MaxVotingPeriod == nil {
+		panic("max voting period cannot be nil")
+	}
+
 	// TODO: support other threshold types
 	switch opts.Threshold.(type) {
 	case *ThresholdThresholdQuorum:
@@ -116,7 +120,7 @@ func NewDAOProposalSingle(core dao_interfaces.IDAOCore, opts *DAOProposalSingleO
 
 func (d *DAOProposalSingle) Render(path string) string {
 	minVotingPeriodStr := "No minimum voting period"
-	if d.opts.MinVotingPeriod != 0 {
+	if d.opts.MinVotingPeriod != nil {
 		minVotingPeriodStr = "Min voting period: " + d.opts.MinVotingPeriod.String()
 	}
 
@@ -205,22 +209,28 @@ func (d *DAOProposalSingle) Propose(title string, description string, messages [
 
 	totalPower := d.core.VotingModule().TotalPowerAtHeight(0)
 
+	expiration := d.opts.MaxVotingPeriod.AfterCurrentBlock()
+	minVotingPeriod := dao_utils.Expiration(nil)
+	if d.opts.MinVotingPeriod != nil {
+		minVotingPeriod = d.opts.MinVotingPeriod.AfterCurrentBlock()
+	}
+
 	id := len(d.proposals)
 
 	prop := Proposal{
-		ID:          id,
-		Title:       title,
-		Description: description,
-		Proposer:    std.PrevRealm().Addr(),
-		StartHeight: std.GetHeight(),
-		// TODO: min_voting_period
-		// TODO: expiration
-		Threshold:     d.opts.Threshold.Clone(),
-		TotalPower:    totalPower,
-		Messages:      messages,
-		Status:        ProposalStatusOpen,
-		Ballots:       avl.NewTree(),
-		AllowRevoting: d.opts.AllowRevoting,
+		ID:              id,
+		Title:           title,
+		Description:     description,
+		Proposer:        std.PrevRealm().Addr(),
+		StartHeight:     std.GetHeight(),
+		MinVotingPeriod: minVotingPeriod,
+		Expiration:      expiration,
+		Threshold:       d.opts.Threshold.Clone(),
+		TotalPower:      totalPower,
+		Messages:        messages,
+		Status:          ProposalStatusOpen,
+		Ballots:         avl.NewTree(),
+		AllowRevoting:   d.opts.AllowRevoting,
 	}
 	prop.updateStatus()
 	d.proposals = append(d.proposals, &prop)
@@ -261,7 +271,10 @@ func (d *DAOProposalSingle) VoteJSON(proposalID int, voteJSON string) {
 		panic("proposal does not exist")
 	}
 	proposal := d.proposals[proposalID]
-	// TODO: check proposal expiration
+
+	if proposal.Expiration.IsExpired() {
+		panic("proposal is expired")
+	}
 
 	votePower := d.core.VotingModule().VotingPowerAtHeight(voter, proposal.StartHeight)
 	if votePower == 0 {
@@ -284,8 +297,6 @@ func (d *DAOProposalSingle) VoteJSON(proposalID int, voteJSON string) {
 }
 
 func (d *DAOProposalSingle) Execute(proposalID int) {
-	executer := std.GetOrigCaller()
-
 	if len(d.proposals) <= proposalID || proposalID < 0 {
 		panic("proposal does not exist")
 	}
@@ -329,7 +340,11 @@ func (d *DAOProposalSingle) Proposals() []*Proposal {
 }
 
 func (d *DAOProposalSingle) ProposalsJSON(limit int, startAfter string, reverse bool) string {
-	return ujson.FormatSlice(d.proposals)
+	iSlice := make([]interface{}, len(d.proposals))
+	for i, p := range d.proposals {
+		iSlice[i] = p
+	}
+	return ujson.FormatSlice(iSlice)
 }
 
 func (d *DAOProposalSingle) ProposalJSON(proposalID int) string {
@@ -351,9 +366,9 @@ func (proposal *Proposal) updateStatus() {
 }
 
 func (proposal *Proposal) isPassed() bool {
-	switch proposal.Threshold.(type) {
+	switch proposal.Threshold.(interface{}).(type) {
 	case *ThresholdAbsolutePercentage:
-		panic("ThresholdAbsolutePercentage not implemented")
+		panic("'isPassed' not implemented for 'ThresholdAbsolutePercentage'")
 	case *ThresholdThresholdQuorum:
 		thresholdObj := proposal.Threshold.(*ThresholdThresholdQuorum)
 
@@ -370,7 +385,7 @@ func (proposal *Proposal) isPassed() bool {
 		options := totalPower - proposal.Votes.Abstain
 		return doesVoteCountPass(proposal.Votes.Yes, options, threshold)
 	case *ThresholdAbsoluteCount:
-		panic("ThresholdAbsoluteCount not implemented")
+		panic("'isPassed' not implemented for 'ThresholdAbsoluteCount'")
 	default:
 		panic("unknown Threshold type")
 	}
@@ -379,7 +394,7 @@ func (proposal *Proposal) isPassed() bool {
 func doesVoteCountPass(yesVotes uint64, options uint64, percent PercentageThreshold) bool {
 	switch percent.(type) {
 	case *PercentageThresholdMajority:
-		panic("not implemented")
+		panic("'doesVoteCountPass' not implemented for 'PercentageThresholdMajority'")
 	case *PercentageThresholdPercent:
 		if options == 0 {
 			return false

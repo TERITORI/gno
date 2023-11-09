@@ -2,14 +2,10 @@ package core
 
 import (
 	"std"
-	"strings"
-	"time"
 
 	dao_interfaces "gno.land/p/demo/teritori/dao_interfaces"
 	"gno.land/p/demo/teritori/markdown_utils"
 )
-
-// TODO: clean this file
 
 // TODO: add wrapper message handler to handle multiple proposal modules messages
 
@@ -75,15 +71,6 @@ func NewDAOCore(
 
 // mutations
 
-func (d *daoCore) ExecuteProposalHook(moduleIndex int, msgs []dao_interfaces.ExecutableMessage) {
-	module := GetProposalModule(d, moduleIndex)
-	if !module.Enabled {
-		panic(ErrModuleDisabledCannotExecute)
-	}
-
-	d.executeMsgs(msgs)
-}
-
 func (d *daoCore) UpdateVotingModule(newVotingModule dao_interfaces.IVotingModule) {
 	if std.CurrentRealm().Addr() != d.realm.Addr() { // not sure this check necessary since the ownership system should protect against mutation from other realms
 		panic(ErrUnauthorized)
@@ -99,7 +86,7 @@ func (d *daoCore) UpdateProposalModules(toAdd []dao_interfaces.IProposalModule, 
 	}
 
 	for _, module := range toAdd {
-		d.AddProposalModule(module)
+		d.addProposalModule(module)
 	}
 
 	for _, moduleIndex := range toDisable {
@@ -117,36 +104,10 @@ func (d *daoCore) UpdateProposalModules(toAdd []dao_interfaces.IProposalModule, 
 	}
 }
 
-// gno-specific mutations
-
-func (d *daoCore) RegisterMessageHandler(msg dao_interfaces.MessageHandler) {
-	d.registry.Register(msg)
-}
-
-func (d *daoCore) RemoveMessageHandler(t string) {
-	d.registry.Remove(t)
-}
-
 // queries
-
-func (d *daoCore) DumpState() {
-	panic(ErrNotImplemented)
-}
-
-func (d *daoCore) Info() {
-	panic(ErrNotImplemented)
-}
 
 func (d *daoCore) ProposalModules() []dao_interfaces.ActivableProposalModule {
 	return d.proposalModules
-}
-
-func (d *daoCore) ProposalModuleCount() int {
-	return len(d.proposalModules)
-}
-
-func (d *daoCore) TotalPowerAtHeight() {
-	panic(ErrNotImplemented)
 }
 
 func (d *daoCore) VotingModule() dao_interfaces.IVotingModule {
@@ -155,38 +116,6 @@ func (d *daoCore) VotingModule() dao_interfaces.IVotingModule {
 
 func (d *daoCore) VotingPowerAtHeight(address std.Address, height int64) uint64 {
 	return d.VotingModule().VotingPowerAtHeight(address, height)
-}
-
-func (d *daoCore) ActiveProposalModules() {
-	panic(ErrNotImplemented)
-}
-
-// custom queries
-
-func (d *daoCore) VotingModule() dao_interfaces.IVotingModule {
-	return d.votingModule
-}
-
-func (d *daoCore) AddProposalModule(proposalMod dao_interfaces.IProposalModule) {
-	for _, mod := range d.proposalModules {
-		if mod.Module != proposalMod {
-			continue
-		}
-
-		if mod.Enabled {
-			panic(ErrModuleAlreadyAdded)
-		}
-		mod.Enabled = true
-		d.activeProposalModuleCount++
-		return
-	}
-
-	d.proposalModules = append(d.proposalModules, dao_interfaces.ActivableProposalModule{
-		Enabled: true,
-		Module:  proposalMod,
-	})
-
-	d.activeProposalModuleCount++
 }
 
 func (d *daoCore) ActiveProposalModuleCount() int {
@@ -210,6 +139,8 @@ func (d *daoCore) Registry() *dao_interfaces.MessagesRegistry {
 	return d.registry
 }
 
+// TODO: move this helper in dao interfaces
+
 func GetProposalModule(core dao_interfaces.IDAOCore, moduleIndex int) *dao_interfaces.ActivableProposalModule {
 	if moduleIndex < 0 {
 		panic("module index must be >= 0")
@@ -221,8 +152,32 @@ func GetProposalModule(core dao_interfaces.IDAOCore, moduleIndex int) *dao_inter
 	return &mods[moduleIndex]
 }
 
+// internal
+
 func (d *daoCore) executeMsgs(msgs []dao_interfaces.ExecutableMessage) {
 	for _, msg := range msgs {
 		d.registry.Execute(msg)
 	}
+}
+
+func (d *daoCore) addProposalModule(proposalMod dao_interfaces.IProposalModule) {
+	for _, mod := range d.proposalModules {
+		if mod.Module != proposalMod {
+			continue
+		}
+
+		if mod.Enabled {
+			panic(ErrModuleAlreadyAdded)
+		}
+		mod.Enabled = true
+		d.activeProposalModuleCount++
+		return
+	}
+
+	d.proposalModules = append(d.proposalModules, dao_interfaces.ActivableProposalModule{
+		Enabled: true,
+		Module:  proposalMod,
+	})
+
+	d.activeProposalModuleCount++
 }

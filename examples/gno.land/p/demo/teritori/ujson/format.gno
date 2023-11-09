@@ -31,7 +31,8 @@ func FormatAny(p interface{}) string {
 	case *avl.Tree:
 		return FormatAVLTree(p.(*avl.Tree))
 	case avl.Tree:
-		return FormatAVLTree(&p.(avl.Tree))
+		t := p.(avl.Tree)
+		return FormatAVLTree(&t)
 	case JSONAble:
 		return p.(JSONAble).ToJSON()
 	case string:
@@ -136,4 +137,10 @@ func FormatAVLTree(t *avl.Tree) string {
 		return false
 	})
 	return FormatObject(kv)
+}
+
+func FormatUnionMember(name string, val interface{}, raw bool) string {
+	return FormatObject([]FormatKV{
+		{Key: name, Value: val, Raw: raw},
+	})
 }

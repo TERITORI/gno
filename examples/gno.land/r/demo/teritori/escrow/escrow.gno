@@ -1,13 +1,12 @@
 package escrow
 
 import (
+	"std"
+	"time"
+
 	fmt "gno.land/p/demo/ufmt"
 	"gno.land/r/demo/gopher20"
 	"gno.land/r/demo/users"
-	"std"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type ContractStatus uint32
@@ -45,21 +44,21 @@ type Milestone struct {
 }
 
 type Contract struct {
-	id               uint64
-	sender           string
-	contractor       string
-	funder           string // funder address
-	escrowToken      string // grc20 token
-	status           ContractStatus
-	expireAt         uint64
-	funderFeedback   string
-	contractorFeedback   string
-	milestones       []Milestone
-	activeMilestone  uint64
-	pausedBy         string
-	conflictHandler  string // can be a realm path or a caller address
-	handlerCandidate string // conflict handler candidate suggested by one party
-	handlerSuggestor string // the suggestor off the conflict handler candidate
+	id                 uint64
+	sender             string
+	contractor         string
+	funder             string // funder address
+	escrowToken        string // grc20 token
+	status             ContractStatus
+	expireAt           uint64
+	funderFeedback     string
+	contractorFeedback string
+	milestones         []Milestone
+	activeMilestone    uint64
+	pausedBy           string
+	conflictHandler    string // can be a realm path or a caller address
+	handlerCandidate   string // conflict handler candidate suggested by one party
+	handlerSuggestor   string // the suggestor off the conflict handler candidate
 }
 
 // Escrow State
