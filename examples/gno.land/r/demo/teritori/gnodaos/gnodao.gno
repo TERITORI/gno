@@ -19,6 +19,20 @@ const (
 	ABSTAIN      VoteOption = 3 // Indicates that the voter is impartial to the outcome of the proposal. Although Abstain votes are counted towards the quorum, they're excluded when calculating the ratio of other voting options above.
 )
 
+func (x VoteOption) String() string {
+	switch x {
+	case YES:
+		return "YES"
+	case NO:
+		return "NO"
+	case NO_WITH_VETO:
+		return "NO_WITH_VETO"
+	case ABSTAIN:
+		return "ABSTAIN"
+	}
+	return "UNKNOWN"
+}
+
 // GNODAO VOTE
 type Vote struct {
 	address   std.Address // address of the voter
@@ -52,6 +66,20 @@ const (
 	REJECTED      ProposalStatus = 3
 	FAILED        ProposalStatus = 4
 )
+
+func (x ProposalStatus) String() string {
+	switch x {
+	case VOTING_PERIOD:
+		return "VOTING_PERIOD"
+	case PASSED:
+		return "PASSED"
+	case REJECTED:
+		return "REJECTED"
+	case FAILED:
+		return "FAILED"
+	}
+	return "UNKNOWN"
+}
 
 func (s ProposalStatus) String() string {
 	switch s {
@@ -410,8 +438,8 @@ func RenderVote(daoId, proposalId uint64, address std.Address) string {
 	return fmt.Sprintf(`{
 	"address": "%s",
 	"timestamp": %d,
-	"option": %d
-}`, vote.address.String(), vote.timestamp, vote.option)
+	"option": "%s"
+}`, vote.address.String(), vote.timestamp, vote.option.String())
 }
 
 type DAOEncode struct {
@@ -556,10 +584,10 @@ func RenderProposal(daoId, proposalId uint64) string {
 	"newURI": "%s",
 	"submitTime": %d,
 	"voteEndTime": %d,
-	"status": %d,
+	"status": "%s",
 	"vpUpdates": %s,
 	"votingPowers": %s
-}`, p.daoId, p.id, p.title, p.summary, p.spendAmount, p.spender.String(), p.newMetadata, p.newURI, p.submitTime, p.voteEndTime, int(p.status), vpUpdatesRendered, votingPowersBySumRendered)
+}`, p.daoId, p.id, p.title, p.summary, p.spendAmount, p.spender.String(), p.newMetadata, p.newURI, p.submitTime, p.voteEndTime, p.status.String(), vpUpdatesRendered, votingPowersBySumRendered)
 }
 
 func RenderProposals(daoId, startAfter, limit uint64) string {
