@@ -1,6 +1,6 @@
 # VRF
 
-For VRF 0.1 for Gnoland, we will use following mechanism.
+For VRF 0.1 for Gnoland, we use following mechanism.
 
 - VRF data feeders are available and only those can feed data
 - Long data bytes will be feed into the realm by multiple feeders
