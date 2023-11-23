@@ -2,6 +2,8 @@ package escrow
 
 import (
 	"std"
+	"strconv"
+	"strings"
 	"time"
 
 	fmt "gno.land/p/demo/ufmt"
@@ -35,12 +37,37 @@ func (x ContractStatus) String() string {
 	return "UNKNOWN"
 }
 
+type MilestoneStatus uint32
+
+const (
+	MS_OPEN      MilestoneStatus = 1
+	MS_PROGRESS  MilestoneStatus = 2
+	MS_REVIEW    MilestoneStatus = 3
+	MS_COMPLETED MilestoneStatus = 4
+)
+
+func (x MilestoneStatus) String() string {
+	switch x {
+	case MS_OPEN:
+		return "MS_OPEN"
+	case MS_PROGRESS:
+		return "MS_PROGRESS"
+	case MS_REVIEW:
+		return "MS_REVIEW"
+	case MS_COMPLETED:
+		return "MS_COMPLETED"
+	}
+	return "UNKNOWN"
+}
+
 type Milestone struct {
 	title    string
 	amount   uint64
 	paid     uint64
 	duration uint64
+	link     string // milestone reference link
 	funded   bool
+	status   MilestoneStatus
 }
 
 type Contract struct {
@@ -49,6 +76,7 @@ type Contract struct {
 	contractor         string
 	funder             string // funder address
 	escrowToken        string // grc20 token
+	metadata           string // store data for image, tags, name, description, links for twitter/github...
 	status             ContractStatus
 	expireAt           uint64
 	funderFeedback     string
@@ -72,10 +100,12 @@ func CreateContract(
 	contractor string,
 	funder string,
 	escrowToken string, // grc20 token
+	metadata string,
 	expiryDuration uint64,
 	milestoneTitles string,
 	milestoneAmounts string,
 	milestoneDurations string,
+	milestoneLinks string,
 	conflictHandler string,
 ) {
 	caller := std.GetOrigCaller()
@@ -101,13 +131,16 @@ func CreateContract(
 	milestoneTitleArr := strings.Split(milestoneTitles, ",")
 	milestoneAmountArr := strings.Split(milestoneAmounts, ",")
 	milestoneDurationArr := strings.Split(milestoneDurations, ",")
+	milestoneLinkArr := strings.Split(milestoneLinks, ",")
 
 	if len(milestoneTitleArr) == 0 {
 		panic("no milestone titles provided")
 	}
 
-	if len(milestoneTitleArr) != len(milestoneAmountArr) || len(milestoneTitleArr) != len(milestoneDurationArr) {
-		panic("mismatch on milestones title, amount and duration")
+	if len(milestoneTitleArr) != len(milestoneAmountArr) ||
+		len(milestoneTitleArr) != len(milestoneDurationArr) ||
+		len(milestoneTitleArr) != len(milestoneLinkArr) {
+		panic("mismatch on milestones title, amount, duration and link")
 	}
 
 	milestones := []Milestone{}
@@ -125,7 +158,9 @@ func CreateContract(
 			amount:   uint64(amount),
 			paid:     false,
 			duration: uint64(duration),
+			link:     milestoneLinkArr[i],
 			funded:   false,
+			status:   MS_OPEN,
 		})
 	}
 
@@ -136,6 +171,7 @@ func CreateContract(
 		contractor:      contractor,
 		funder:          funder,
 		escrowToken:     escrowToken,
+		metadata:        metadata,
 		status:          CREATED,
 		expireAt:        uint64(time.Now().Unix()) + expiryDuration,
 		milestones:      milestones,
@@ -279,7 +315,56 @@ func PayAndCompleteActiveMilestone(contractId uint64) {
 			unpaid)
 		contracts[contractId].milestones[milestoneId].paid += unpaid
 	}
+	contracts[contractId].milestones[milestoneId].status = MS_COMPLETED
 	contracts[contractId].activeMilestone += 1
+}
+
+func SetActiveMilestoneInReview(contractId uint64) {
+	caller := std.GetOrigCaller()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+	if contract.funder != caller.String() && contract.contractor != caller.String() {
+		panic("only contract participant can execute the action")
+	}
+
+	if contract.status != ACCEPTED {
+		panic("contract is not on accepted status")
+	}
+
+	milestoneId := contract.activeMilestone
+	milestone := contract.milestones[milestoneId]
+	if milestone.status != MS_PROGRESS {
+		panic("milestone is not in progress")
+	}
+
+	contracts[contractId].milestones[milestoneId].status = MS_REVIEW
+}
+
+func SetActiveMilestoneInProgress(contractId uint64) {
+	caller := std.GetOrigCaller()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+	if contract.funder != caller.String() && contract.contractor != caller.String() {
+		panic("only contract participant can execute the action")
+	}
+
+	if contract.status != ACCEPTED {
+		panic("contract is not on accepted status")
+	}
+
+	milestoneId := contract.activeMilestone
+	milestone := contract.milestones[milestoneId]
+	if milestone.status != MS_REVIEW {
+		panic("milestone is not in review")
+	}
+
+	contracts[contractId].milestones[milestoneId].status = MS_PROGRESS
 }
 
 // fund milestone
@@ -311,6 +396,7 @@ func StartMilestone(contractId uint64) {
 		users.AddressOrName(std.CurrentRealm().Addr().String()),
 		milestone.amount)
 	contracts[contractId].milestones[milestoneId].funded = true
+	contracts[contractId].milestones[milestoneId].status = MS_PROGRESS
 }
 
 func AddUpcomingMilestone(
@@ -318,6 +404,7 @@ func AddUpcomingMilestone(
 	title string,
 	amount uint64,
 	duration uint64,
+	link string,
 ) {
 	caller := std.GetOrigCaller()
 	if int(contractId) >= len(contracts) {
@@ -339,6 +426,7 @@ func AddUpcomingMilestone(
 		paid:     false,
 		duration: duration,
 		funded:   false,
+		status:   MS_OPEN,
 	})
 }
 
@@ -467,6 +555,9 @@ func CompleteContractByConflictHandler(contractId uint64, contractorAmount uint6
 	gopher20.Transfer(
 		users.AddressOrName(contract.funder),
 		funderAmount)
+
+	contracts[contractId].milestones[milestoneId].paid += contractorAmount
+	contracts[contractId].milestones[milestoneId].status = MS_COMPLETED
 	contracts[contractId].activeMilestone += 1
 	contracts[contractId].status = COMPLETED
 }
@@ -513,8 +604,10 @@ func RenderContract(contractId uint64) string {
 	"amount": %d,
 	"paid": %d,
 	"duration": %d,
-	"funded": %t
-}`, m.title, m.amount, m.paid, m.duration, m.funded))
+	"status": "%s",
+	"funded": %t,
+	"link": "%s"
+}`, m.title, m.amount, m.paid, m.duration, m.status.String(), m.funded, m.link))
 	}
 	milestonesText := strings.Join(milestoneEncodes, ",\n")
 
@@ -524,6 +617,7 @@ func RenderContract(contractId uint64) string {
 		"contractor": "%s",
 		"funder": "%s",
 		"escrowToken": "%s",
+		"metadata": "%s",
 		"status": "%s",
 		"expireAt": %d,
 		"funderFeedback": "%s",
@@ -534,7 +628,7 @@ func RenderContract(contractId uint64) string {
 		"conflictHandler": "%s",
 		"handlerCandidate": "%s",
 		"handlerSuggestor": "%s"
-}`, c.id, c.sender, c.contractor, c.funder, c.escrowToken, c.status.String(),
+}`, c.id, c.sender, c.contractor, c.funder, c.escrowToken, c.metadata, c.status.String(),
 		c.expireAt, c.funderFeedback, c.contractorFeedback,
 		milestonesText, c.activeMilestone, c.pausedBy,
 		c.conflictHandler, c.handlerCandidate, c.handlerSuggestor)
