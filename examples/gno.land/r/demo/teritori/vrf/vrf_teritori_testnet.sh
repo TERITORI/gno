@@ -20,7 +20,7 @@ gnokey maketx addpkg  \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
   -pkgdir="./r/vrf" \
-  -pkgpath="gno.land/r/demo/vrf_08" \
+  -pkgpath="gno.land/r/demo/vrf_09" \
   teritori
 
 # Set VRF admin
@@ -30,7 +30,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/vrf_08" \
+  -pkgpath="gno.land/r/demo/vrf_09" \
   -func="SetVRFAdmin" \
   -args="$TERITORI" \
   teritori
@@ -42,7 +42,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/vrf_08" \
+  -pkgpath="gno.land/r/demo/vrf_09" \
   -func="SetFeeders" \
   -args="$TERITORI" \
   teritori
@@ -54,7 +54,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/vrf_08" \
+  -pkgpath="gno.land/r/demo/vrf_09" \
   -func="RequestRandomWords" \
   -args="1" \
   teritori
@@ -66,32 +66,32 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/vrf_08" \
+  -pkgpath="gno.land/r/demo/vrf_09" \
   -func="FulfillRandomWords" \
   -args="0" \
   -args="f440c4980357d8b56db87ddd50f06bd551f1319a" \
   teritori
 
 # Query config
-gnokey query "vm/qeval" -data="gno.land/r/demo/vrf_08
+gnokey query "vm/qeval" -data="gno.land/r/demo/vrf_09
 RenderConfig()" -remote="51.15.236.215:26657"
 
 # Query Requests
-gnokey query "vm/qeval" -data="gno.land/r/demo/vrf_08
+gnokey query "vm/qeval" -data="gno.land/r/demo/vrf_09
 RenderRequests(0, 10)" -remote="51.15.236.215:26657"
 
 # Query request
-gnokey query "vm/qeval" -data="gno.land/r/demo/vrf_08
+gnokey query "vm/qeval" -data="gno.land/r/demo/vrf_09
 RenderRequest(0)" -remote="51.15.236.215:26657"
 
 # Query IsFeeder
-gnokey query "vm/qeval" -data="gno.land/r/demo/vrf_08
+gnokey query "vm/qeval" -data="gno.land/r/demo/vrf_09
 IsFeeder(\"$TERITORI\")" -remote="51.15.236.215:26657"
 
 # Query RandomValueFromWordsWithIndex
-gnokey query "vm/qeval" -data="gno.land/r/demo/vrf_08
+gnokey query "vm/qeval" -data="gno.land/r/demo/vrf_09
 RandomValueFromWordsWithIndex(0, 0)" -remote="51.15.236.215:26657"
 
 # Query RandomValueFromWordsWithIndex
-gnokey query "vm/qeval" -data="gno.land/r/demo/vrf_08
+gnokey query "vm/qeval" -data="gno.land/r/demo/vrf_09
 RandomValueFromWords(0)" -remote="51.15.236.215:26657"
