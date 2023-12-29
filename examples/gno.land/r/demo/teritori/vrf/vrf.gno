@@ -52,6 +52,10 @@ const (
 		"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
 )
 
+func init() {
+	config.vrfAdmin = std.GetOrigCaller().String()
+}
+
 // ErrLength reports an attempt to decode an odd-length input
 // using Decode or DecodeString.
 // The stream-based Decoder returns io.ErrUnexpectedEOF instead of ErrLength.
@@ -159,10 +163,6 @@ func RenderRequests(startAfter uint64, limit uint64) string {
 }
 
 func SetVRFAdmin(vrfAdmin string) {
-	if config.vrfAdmin == "" {
-		config.vrfAdmin = vrfAdmin
-		return
-	}
 	caller := std.GetOrigCaller()
 	if config.vrfAdmin != caller.String() {
 		panic("not allowed to update vrfAdmin")
@@ -172,12 +172,12 @@ func SetVRFAdmin(vrfAdmin string) {
 }
 
 func SetFeeders(feedersText string) {
-	feeders := strings.Split(feedersText, ",")
 	caller := std.GetOrigCaller()
 	if config.vrfAdmin != caller.String() {
 		panic("not allowed set feeders")
 	}
 
+	feeders := strings.Split(feedersText, ",")
 	config.feeders = feeders
 }
 
