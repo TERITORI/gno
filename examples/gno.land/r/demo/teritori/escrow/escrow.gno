@@ -108,7 +108,6 @@ type Contract struct {
 	funderFeedback     string
 	contractorFeedback string
 	milestones         []Milestone
-	activeMilestone    uint64
 	pausedBy           string
 	conflictHandler    string // can be a realm path or a caller address
 	handlerCandidate   string // conflict handler candidate suggested by one party
@@ -238,7 +237,6 @@ func CreateContract(
 		status:          CREATED,
 		expireAt:        uint64(time.Now().Unix()) + expiryDuration,
 		milestones:      milestones,
-		activeMilestone: 0,
 		conflictHandler: conflictHandler,
 		budget:          projectBudget,
 		funded:          funded,
@@ -348,8 +346,8 @@ func ResumeContract(contractId uint64) {
 	contracts[contractId].pausedBy = ""
 }
 
-// pay partial amount
-func PayActiveMilestone(contractId uint64, amount uint64) {
+// pay partial amount for the milestone
+func PayPartialMilestone(contractId uint64, milestoneId uint64, amount uint64) {
 	caller := std.GetOrigCaller()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
@@ -364,7 +362,6 @@ func PayActiveMilestone(contractId uint64, amount uint64) {
 		panic("cannot pay on not accepted contract")
 	}
 
-	milestoneId := contract.activeMilestone
 	milestone := contract.milestones[milestoneId]
 	if !milestone.funded {
 		panic("not funded for the milestone")
@@ -464,44 +461,6 @@ func CompleteMilestoneAndPay(contractId uint64, milestoneId uint64) {
 	}
 
 	// Pay the milestone
-	tori20.Transfer(
-		users.AddressOrName(contract.contractor),
-		milestone.amount,
-	)
-
-	contracts[contractId].milestones[milestoneId].status = MS_COMPLETED
-
-	// If finish all milestone then complete the contract
-	comletedCount := 0
-	for _, milestone := range contract.milestones {
-		if milestone.status == MS_COMPLETED {
-			comletedCount++
-		}
-	}
-
-	if comletedCount == len(contract.milestones) {
-		contracts[contractId].status = COMPLETED
-	}
-}
-
-// pay unpaid amount and move to next milestone
-func PayAndCompleteActiveMilestone(contractId uint64) {
-	caller := std.GetOrigCaller()
-	if int(contractId) >= len(contracts) {
-		panic("invalid contract id")
-	}
-
-	contract := contracts[contractId]
-	if contract.funder != caller.String() {
-		panic("only contract funder can pay the milestone")
-	}
-
-	if contract.status == CREATED || contract.status == CANCELED {
-		panic("cannot pay on not accepted contract")
-	}
-
-	milestoneId := contract.activeMilestone
-	milestone := contract.milestones[milestoneId]
 	unpaid := milestone.amount - milestone.paid
 	if unpaid > 0 {
 		tori20.Transfer(
@@ -509,56 +468,20 @@ func PayAndCompleteActiveMilestone(contractId uint64) {
 			unpaid)
 		contracts[contractId].milestones[milestoneId].paid += unpaid
 	}
+
 	contracts[contractId].milestones[milestoneId].status = MS_COMPLETED
-	contracts[contractId].activeMilestone += 1
-}
 
-func SetActiveMilestoneInReview(contractId uint64) {
-	caller := std.GetOrigCaller()
-	if int(contractId) >= len(contracts) {
-		panic("invalid contract id")
+	// If finish all milestone then complete the contract
+	completedCount := 0
+	for _, milestone := range contract.milestones {
+		if milestone.status == MS_COMPLETED {
+			completedCount++
+		}
 	}
 
-	contract := contracts[contractId]
-	if contract.funder != caller.String() && contract.contractor != caller.String() {
-		panic("only contract participant can execute the action")
+	if completedCount == len(contract.milestones) {
+		contracts[contractId].status = COMPLETED
 	}
-
-	if contract.status != ACCEPTED {
-		panic("contract is not on accepted status")
-	}
-
-	milestoneId := contract.activeMilestone
-	milestone := contract.milestones[milestoneId]
-	if milestone.status != MS_PROGRESS {
-		panic("milestone is not in progress")
-	}
-
-	contracts[contractId].milestones[milestoneId].status = MS_REVIEW
-}
-
-func SetActiveMilestoneInProgress(contractId uint64) {
-	caller := std.GetOrigCaller()
-	if int(contractId) >= len(contracts) {
-		panic("invalid contract id")
-	}
-
-	contract := contracts[contractId]
-	if contract.funder != caller.String() && contract.contractor != caller.String() {
-		panic("only contract participant can execute the action")
-	}
-
-	if contract.status != ACCEPTED {
-		panic("contract is not on accepted status")
-	}
-
-	milestoneId := contract.activeMilestone
-	milestone := contract.milestones[milestoneId]
-	if milestone.status != MS_REVIEW {
-		panic("milestone is not in review")
-	}
-
-	contracts[contractId].milestones[milestoneId].status = MS_PROGRESS
 }
 
 // Set milestone status
@@ -595,7 +518,7 @@ func ChangeMilestoneStatus(contractId uint64, milestoneId int, newStatus Milesto
 }
 
 // fund milestone
-func StartMilestone(contractId uint64) {
+func FundMilestone(contractId uint64, milestoneId uint64) {
 	caller := std.GetOrigCaller()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
@@ -610,9 +533,8 @@ func StartMilestone(contractId uint64) {
 		panic("cannot start milestone on not accepted contract")
 	}
 
-	milestoneId := contract.activeMilestone
 	if len(contract.milestones) <= int(milestoneId) {
-		panic("new milestone is not prepared")
+		panic("invalid milestone id")
 	}
 	milestone := contract.milestones[milestoneId]
 	if milestone.funded {
@@ -703,10 +625,10 @@ func CompleteContract(contractId uint64) {
 		panic("only contract funder can complete")
 	}
 
-	milestones := contract.milestones
-	milestoneId := contract.activeMilestone
-	if int(milestoneId) < len(milestones) && milestones[milestoneId].funded {
-		panic("active milestone exists")
+	for _, milestone := range contract.milestones {
+		if milestone.status != MS_COMPLETED && milestone.funded {
+			panic("active milestone exists")
+		}
 	}
 
 	contracts[contractId].status = COMPLETED
@@ -752,7 +674,7 @@ func ApproveConflictHandler(contractId uint64, conflictHandler string) {
 	contracts[contractId].conflictHandler = conflictHandler
 }
 
-func CompleteContractByConflictHandler(contractId uint64, contractorAmount uint64) {
+func CompleteContractByConflictHandler(contractId uint64, milestoneId uint64, contractorAmount uint64) {
 	caller := std.GetOrigCaller()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
@@ -769,7 +691,6 @@ func CompleteContractByConflictHandler(contractId uint64, contractorAmount uint6
 	}
 
 	milestones := contract.milestones
-	milestoneId := contract.activeMilestone
 	if len(milestones) <= int(milestoneId) {
 		panic("active milestone is not valid")
 	}
@@ -790,8 +711,17 @@ func CompleteContractByConflictHandler(contractId uint64, contractorAmount uint6
 
 	contracts[contractId].milestones[milestoneId].paid += contractorAmount
 	contracts[contractId].milestones[milestoneId].status = MS_COMPLETED
-	contracts[contractId].activeMilestone += 1
-	contracts[contractId].status = COMPLETED
+
+	canComplete := true
+	for _, milestone := range contract.milestones {
+		if milestone.funded && milestone.status != MS_COMPLETED {
+			canComplete = false
+		}
+	}
+
+	if canComplete {
+		contracts[contractId].status = COMPLETED
+	}
 }
 
 func GiveFeedback(contractId uint64, feedback string) {
@@ -884,7 +814,6 @@ func RenderContract(contractId uint64) string {
 		"funderFeedback": "%s",
 		"contractorFeedback": "%s",
 		"milestones": [%s],
-		"activeMilestone": %d,
 		"pausedBy": "%s",
 		"conflictHandler": "%s",
 		"handlerCandidate": "%s",
@@ -894,7 +823,7 @@ func RenderContract(contractId uint64) string {
 		"rejectReason": "%s"
 }`, c.id, c.sender, c.contractor, c.funder, c.escrowToken, strings.ReplaceAll(c.metadata, "\"", "\\\""), c.status.String(),
 		c.expireAt, c.funderFeedback, c.contractorFeedback,
-		milestonesText, c.activeMilestone, c.pausedBy,
+		milestonesText, c.pausedBy,
 		c.conflictHandler, c.handlerCandidate, c.handlerSuggestor, c.budget, c.funded, c.rejectReason)
 }
 

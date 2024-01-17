@@ -86,7 +86,7 @@ gnokey maketx call \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
   -pkgpath="gno.land/r/demo/escrow_15" \
-  -func="StartMilestone" \
+  -func="FundMilestone" \
   -args="0" \
   teritori
 
@@ -134,7 +134,7 @@ gnokey maketx call \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
   -pkgpath="gno.land/r/demo/escrow_15" \
-  -func="PayActiveMilestone" \
+  -func="PayPartialMilestone" \
   -args="0" \
   -args="5" \
   teritori
@@ -151,30 +151,6 @@ gnokey maketx call \
   -args="0" \
   teritori
 
-# Set active milestone in review
-gnokey maketx call \
-  -gas-fee="1ugnot" \
-  -gas-wanted="5000000" \
-  -broadcast="true" \
-  -remote="51.15.236.215:26657" \
-  -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/escrow_15" \
-  -func="SetActiveMilestoneInReview" \
-  -args="0" \
-  teritori
-
-# Set active milestone in progress
-gnokey maketx call \
-  -gas-fee="1ugnot" \
-  -gas-wanted="5000000" \
-  -broadcast="true" \
-  -remote="51.15.236.215:26657" \
-  -chainid="teritori-1" \
-  -pkgpath="gno.land/r/demo/escrow_15" \
-  -func="SetActiveMilestoneInProgress" \
-  -args="0" \
-  teritori
-
 # Fund active milestone - Start milestone
 gnokey maketx call \
   -gas-fee="1ugnot" \
@@ -183,7 +159,7 @@ gnokey maketx call \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
   -pkgpath="gno.land/r/demo/escrow_15" \
-  -func="StartMilestone" \
+  -func="FundMilestone" \
   -args="0" \
   teritori
 

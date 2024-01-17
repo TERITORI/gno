@@ -114,9 +114,9 @@ It has following fields
 - Contract status is set to `ACCEPTED` after the successful execution
 - Contract `pausedBy` field is emptied.
 
-#### PayActiveMilestone
+#### PayPartialMilestone
 
-`PayActiveMilestone` is the process of paying partial amount for the active milestone and not complete the milestone.
+`PayPartialMilestone` is the process of paying partial amount for the active milestone and not complete the milestone.
 
 - `contractId` and `amount` fields are passed to the endpoint
 - contract should not be at `CREATED` status (offer status), and should be one of `ACCEPTED`, `PAUSED`, or `COMPLETED`
@@ -133,9 +133,9 @@ It has following fields
 - Check if there's unpaid amount exist and if so, execute the remaining payment
 - Move to next milestone by increasing `activeMilestone` by 1
 
-#### StartMilestone
+#### FundMilestone
 
-`StartMilestone` is an endpoint to put funds on escrow for the active milestone.
+`FundMilestone` is an endpoint to put funds on escrow for the active milestone.
 
 - `contractId` field is passed to the endpoint
 - contract should not be at `CREATED` status (offer status), and should be one of `ACCEPTED`, `PAUSED`, or `COMPLETED`
