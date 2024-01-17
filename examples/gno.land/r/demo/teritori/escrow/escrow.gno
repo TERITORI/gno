@@ -7,7 +7,7 @@ import (
 	"time"
 
 	fmt "gno.land/p/demo/ufmt"
-	"gno.land/r/demo/gopher20"
+	tori20 "gno.land/r/demo/tori20"
 	"gno.land/r/demo/users"
 )
 
@@ -19,6 +19,7 @@ const (
 	CANCELED  ContractStatus = 3
 	PAUSED    ContractStatus = 4
 	COMPLETED ContractStatus = 5
+	REJECTED  ContractStatus = 6
 )
 
 func (x ContractStatus) String() string {
@@ -33,6 +34,8 @@ func (x ContractStatus) String() string {
 		return "PAUSED"
 	case COMPLETED:
 		return "COMPLETED"
+	case REJECTED:
+		return "REJECTED"
 	}
 	return "UNKNOWN"
 }
@@ -60,13 +63,36 @@ func (x MilestoneStatus) String() string {
 	return "UNKNOWN"
 }
 
+type MilestonePriority uint32
+
+const (
+	MS_PRIORITY_HIGH   MilestonePriority = 1
+	MS_PRIORITY_MEDIUM MilestonePriority = 2
+	MS_PRIORITY_LOW    MilestonePriority = 3
+)
+
+func (x MilestonePriority) String() string {
+	switch x {
+	case MS_PRIORITY_HIGH:
+		return "MS_PRIORITY_HIGH"
+	case MS_PRIORITY_MEDIUM:
+		return "MS_PRIORITY_MEDIUM"
+	case MS_PRIORITY_LOW:
+		return "MS_PRIORITY_LOW"
+	}
+	return "UNKNOWN"
+}
+
 type Milestone struct {
+	id       uint64
 	title    string
+	desc     string
 	amount   uint64
 	paid     uint64
 	duration uint64
 	link     string // milestone reference link
 	funded   bool
+	priority MilestonePriority
 	status   MilestoneStatus
 }
 
@@ -76,7 +102,7 @@ type Contract struct {
 	contractor         string
 	funder             string // funder address
 	escrowToken        string // grc20 token
-	metadata           string // store data for image, tags, name, description, links for twitter/github...
+	metadata           string // store data forforimage, tags, name, description, links for twitter/github...
 	status             ContractStatus
 	expireAt           uint64
 	funderFeedback     string
@@ -87,6 +113,10 @@ type Contract struct {
 	conflictHandler    string // can be a realm path or a caller address
 	handlerCandidate   string // conflict handler candidate suggested by one party
 	handlerSuggestor   string // the suggestor off the conflict handler candidate
+	createdAt          uint64
+	budget             uint64
+	funded             bool
+	rejectReason       string
 }
 
 // Escrow State
@@ -103,9 +133,11 @@ func CreateContract(
 	metadata string,
 	expiryDuration uint64,
 	milestoneTitles string,
+	milestoneDescs string,
 	milestoneAmounts string,
 	milestoneDurations string,
 	milestoneLinks string,
+	milestonePriorities string,
 	conflictHandler string,
 ) {
 	caller := std.GetOrigCaller()
@@ -116,12 +148,9 @@ func CreateContract(
 		panic("invalid escrow token")
 	}
 
-	if contractor == "" {
-		panic("contractor should not be empty")
-	}
-
-	if funder == "" {
-		panic("funder should not be empty")
+	// For now, one of funder or contract could be empty and can be set later
+	if contractor == "" && funder == "" {
+		panic("contractor and funder cannot be both empty")
 	}
 
 	if contractor != caller.String() && funder != caller.String() {
@@ -129,9 +158,11 @@ func CreateContract(
 	}
 
 	milestoneTitleArr := strings.Split(milestoneTitles, ",")
+	milestoneDescArr := strings.Split(milestoneDescs, ",")
 	milestoneAmountArr := strings.Split(milestoneAmounts, ",")
 	milestoneDurationArr := strings.Split(milestoneDurations, ",")
 	milestoneLinkArr := strings.Split(milestoneLinks, ",")
+	milestonePrioritiesArr := strings.Split(milestonePriorities, ",")
 
 	if len(milestoneTitleArr) == 0 {
 		panic("no milestone titles provided")
@@ -139,11 +170,14 @@ func CreateContract(
 
 	if len(milestoneTitleArr) != len(milestoneAmountArr) ||
 		len(milestoneTitleArr) != len(milestoneDurationArr) ||
+		len(milestoneTitleArr) != len(milestonePrioritiesArr) ||
+		len(milestoneTitleArr) != len(milestoneDescArr) ||
 		len(milestoneTitleArr) != len(milestoneLinkArr) {
-		panic("mismatch on milestones title, amount, duration and link")
+		panic("mismatch on milestones title, description, amount, duration, priority and link")
 	}
 
 	milestones := []Milestone{}
+	projectBudget := uint64(0)
 	for i, title := range milestoneTitleArr {
 		amount, err := strconv.Atoi(milestoneAmountArr[i])
 		if err != nil {
@@ -153,15 +187,44 @@ func CreateContract(
 		if err != nil {
 			panic(err)
 		}
+
+		var prio MilestonePriority
+
+		switch milestonePrioritiesArr[i] {
+		case "MS_PRIORITY_HIGH":
+			prio = MS_PRIORITY_HIGH
+		case "MS_PRIORITY_MEDIUM":
+			prio = MS_PRIORITY_MEDIUM
+		case "MS_PRIORITY_LOW":
+			prio = MS_PRIORITY_LOW
+		default:
+			panic("priority is not valid")
+		}
+
 		milestones = append(milestones, Milestone{
+			id:       uint64(i),
 			title:    title,
+			desc:     milestoneDescArr[i],
 			amount:   uint64(amount),
 			paid:     false,
 			duration: uint64(duration),
 			link:     milestoneLinkArr[i],
+			priority: prio,
 			funded:   false,
 			status:   MS_OPEN,
 		})
+		projectBudget += uint64(amount)
+	}
+
+	// If contract creator is funder then he needs to send all the needed fund to contract
+	funded := false
+	if caller.String() == funder {
+		tori20.TransferFrom(
+			users.AddressOrName(caller.String()),
+			users.AddressOrName(std.CurrentRealm().Addr().String()),
+			projectBudget)
+
+		funded = true
 	}
 
 	contractId := uint64(len(contracts))
@@ -177,6 +240,9 @@ func CreateContract(
 		milestones:      milestones,
 		activeMilestone: 0,
 		conflictHandler: conflictHandler,
+		budget:          projectBudget,
+		funded:          funded,
+		createdAt:       uint64(time.Now().Unix()),
 	})
 }
 
@@ -196,6 +262,29 @@ func CancelContract(contractId uint64) {
 	}
 
 	contracts[contractId].status = CANCELED
+}
+
+func RejectContract(contractId uint64, rejectReason string) {
+	caller := std.GetOrigCaller()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+	if contract.status != CREATED {
+		panic("contract can only be cancelled at CREATED status")
+	}
+
+	if contract.sender == contract.contractor && caller.String() != contract.funder {
+		// If contract creator is contractor then only funder can reject
+		panic("only funder can reject a request from contractor")
+	} else if contract.sender == contract.funder && caller.String() != contract.contractor {
+		// If contract creator is funder then only contractor can reject
+		panic("only contractor can reject a request from funder")
+	}
+
+	contracts[contractId].status = REJECTED
+	contracts[contractId].rejectReason = rejectReason
 }
 
 func AcceptContract(contractId uint64) {
@@ -284,10 +373,115 @@ func PayActiveMilestone(contractId uint64, amount uint64) {
 		panic("could not pay more than milestone amount")
 	}
 
-	gopher20.Transfer(
+	tori20.Transfer(
 		users.AddressOrName(contract.contractor),
 		amount)
 	contracts[contractId].milestones[milestoneId].paid += amount
+}
+
+// Submit candidate as a funder
+func SubmitFunder(contractId uint64) {
+	caller := std.GetOrigCaller()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+
+	if contract.status != CREATED {
+		panic("can only submit candidate to a CREATED contract")
+	}
+
+	if contract.funder != "" {
+		panic("the contract has already a funder")
+	}
+
+	if caller.String() == contract.contractor {
+		panic("you cannot become a funder of your requested contract")
+	}
+
+	// Deposit needed amount to contract to become funder
+	projectBudget := uint64(0)
+	for _, milestone := range contract.milestones {
+		projectBudget += milestone.amount
+	}
+
+	tori20.TransferFrom(
+		users.AddressOrName(caller.String()),
+		users.AddressOrName(std.CurrentRealm().Addr().String()),
+		projectBudget,
+	)
+
+	contracts[contractId].funded = true
+	contracts[contractId].status = ACCEPTED
+	contracts[contractId].funder = caller.String()
+}
+
+// Submit candidate as a contractor
+func SubmitContractor(contractId uint64) {
+	caller := std.GetOrigCaller()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+
+	if contract.status != CREATED {
+		panic("can only submit candidate to a CREATED contract")
+	}
+
+	if contract.contractor != "" {
+		panic("the contract has already a contractor")
+	}
+
+	if caller.String() == contract.funder {
+		panic("you cannot become a contractor of your funded contract")
+	}
+
+	contracts[contractId].status = ACCEPTED
+	contracts[contractId].contractor = caller.String()
+}
+
+// Complete any milestone in review status and pay the needed amount
+func CompleteMilestoneAndPay(contractId uint64, milestoneId uint64) {
+	caller := std.GetOrigCaller()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+	if contract.funder != caller.String() {
+		panic("only contract funder can pay the milestone")
+	}
+
+	if contract.status != ACCEPTED {
+		panic("only accepted contract can be paid")
+	}
+
+	milestone := contract.milestones[milestoneId]
+	if milestone.status != MS_REVIEW {
+		panic("can only complete and pay a milestone which is in review status")
+	}
+
+	// Pay the milestone
+	tori20.Transfer(
+		users.AddressOrName(contract.contractor),
+		milestone.amount,
+	)
+
+	contracts[contractId].milestones[milestoneId].status = MS_COMPLETED
+
+	// If finish all milestone then complete the contract
+	comletedCount := 0
+	for _, milestone := range contract.milestones {
+		if milestone.status == MS_COMPLETED {
+			comletedCount++
+		}
+	}
+
+	if comletedCount == len(contract.milestones) {
+		contracts[contractId].status = COMPLETED
+	}
 }
 
 // pay unpaid amount and move to next milestone
@@ -310,7 +504,7 @@ func PayAndCompleteActiveMilestone(contractId uint64) {
 	milestone := contract.milestones[milestoneId]
 	unpaid := milestone.amount - milestone.paid
 	if unpaid > 0 {
-		gopher20.Transfer(
+		tori20.Transfer(
 			users.AddressOrName(contract.contractor),
 			unpaid)
 		contracts[contractId].milestones[milestoneId].paid += unpaid
@@ -367,6 +561,39 @@ func SetActiveMilestoneInProgress(contractId uint64) {
 	contracts[contractId].milestones[milestoneId].status = MS_PROGRESS
 }
 
+// Set milestone status
+func ChangeMilestoneStatus(contractId uint64, milestoneId int, newStatus MilestoneStatus) {
+	caller := std.GetOrigCaller()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+	if contract.funder != caller.String() && contract.contractor != caller.String() {
+		panic("only contract participant can execute the action")
+	}
+
+	if contract.status != ACCEPTED {
+		panic("contract is not on accepted status")
+	}
+
+	if caller.String() == contract.contractor && newStatus == MS_COMPLETED {
+		panic("contractor cannot set status to completed")
+	}
+
+	if len(contract.milestones) <= milestoneId {
+		panic("milestone Id does not exist in contract")
+	}
+
+	milestone := contract.milestones[milestoneId]
+	if milestone.status == MS_COMPLETED {
+		panic("milestone is already completed")
+	}
+
+	// TODO: Send fund when funder set project to completed
+	contracts[contractId].milestones[milestoneId].status = newStatus
+}
+
 // fund milestone
 func StartMilestone(contractId uint64) {
 	caller := std.GetOrigCaller()
@@ -391,7 +618,7 @@ func StartMilestone(contractId uint64) {
 	if milestone.funded {
 		panic("milestone already funded")
 	}
-	gopher20.TransferFrom(
+	tori20.TransferFrom(
 		users.AddressOrName(caller.String()),
 		users.AddressOrName(std.CurrentRealm().Addr().String()),
 		milestone.amount)
@@ -402,6 +629,7 @@ func StartMilestone(contractId uint64) {
 func AddUpcomingMilestone(
 	contractId uint64,
 	title string,
+	desc string,
 	amount uint64,
 	duration uint64,
 	link string,
@@ -420,8 +648,12 @@ func AddUpcomingMilestone(
 		panic("milestone can not be modified on completed contract")
 	}
 
+	newId := len(contracts[contractId].milestones)
+
 	contracts[contractId].milestones = append(contracts[contractId].milestones, Milestone{
+		id:       uint64(newId),
 		title:    title,
+		desc:     desc,
 		amount:   amount,
 		paid:     false,
 		duration: duration,
@@ -549,10 +781,10 @@ func CompleteContractByConflictHandler(contractId uint64, contractorAmount uint6
 
 	funderAmount := unpaidAmount - contractorAmount
 
-	gopher20.Transfer(
+	tori20.Transfer(
 		users.AddressOrName(contract.contractor),
 		contractorAmount)
-	gopher20.Transfer(
+	tori20.Transfer(
 		users.AddressOrName(contract.funder),
 		funderAmount)
 
@@ -582,12 +814,38 @@ func GiveFeedback(contractId uint64, feedback string) {
 	}
 }
 
-func GetContracts(startAfter, limit uint64) []Contract {
+func GetContracts(startAfter, limit uint64, filterByFunder string, filterByContractor string) []Contract {
 	max := uint64(len(contracts))
 	if startAfter+limit < max {
 		max = startAfter + limit
 	}
-	return contracts[startAfter:max]
+
+	var results []Contract
+	i := uint64(0)
+
+	for _, c := range contracts {
+		if filterByFunder != "ALL" && c.funder != filterByFunder {
+			continue
+		}
+
+		if filterByContractor != "ALL" && c.contractor != filterByContractor {
+			continue
+		}
+
+		if i < startAfter {
+			i++
+			continue
+		}
+
+		if i > max {
+			break
+		}
+
+		results = append(results, c)
+		i++
+	}
+
+	return results
 }
 
 func RenderContract(contractId uint64) string {
@@ -600,14 +858,17 @@ func RenderContract(contractId uint64) string {
 	milestoneEncodes := []string{}
 	for _, m := range c.milestones {
 		milestoneEncodes = append(milestoneEncodes, fmt.Sprintf(`{
+	"id": %d,
 	"title": "%s",
+	"desc": "%s",
 	"amount": %d,
 	"paid": %d,
 	"duration": %d,
 	"status": "%s",
 	"funded": %t,
+	"priority": "%s",
 	"link": "%s"
-}`, m.title, m.amount, m.paid, m.duration, m.status.String(), m.funded, m.link))
+}`, m.id, m.title, m.desc, m.amount, m.paid, m.duration, m.status.String(), m.funded, m.priority.String(), m.link))
 	}
 	milestonesText := strings.Join(milestoneEncodes, ",\n")
 
@@ -627,21 +888,26 @@ func RenderContract(contractId uint64) string {
 		"pausedBy": "%s",
 		"conflictHandler": "%s",
 		"handlerCandidate": "%s",
-		"handlerSuggestor": "%s"
-}`, c.id, c.sender, c.contractor, c.funder, c.escrowToken, c.metadata, c.status.String(),
+		"handlerSuggestor": "%s",
+		"budget": %d,
+		"funded": %t,
+		"rejectReason": "%s"
+}`, c.id, c.sender, c.contractor, c.funder, c.escrowToken, strings.ReplaceAll(c.metadata, "\"", "\\\""), c.status.String(),
 		c.expireAt, c.funderFeedback, c.contractorFeedback,
 		milestonesText, c.activeMilestone, c.pausedBy,
-		c.conflictHandler, c.handlerCandidate, c.handlerSuggestor)
+		c.conflictHandler, c.handlerCandidate, c.handlerSuggestor, c.budget, c.funded, c.rejectReason)
 }
 
-func RenderContracts(startAfter uint64, limit uint64) string {
-	contracts := GetContracts(startAfter, limit)
+func RenderContracts(startAfter uint64, limit uint64, filterByFunder string, filterByContractor string) string {
+	contracts := GetContracts(startAfter, limit, filterByFunder, filterByContractor)
 	rendered := "["
 	for index, contract := range contracts {
-		rendered += RenderContract(contract.id)
-		if index != len(contracts)-1 {
+		// If render === "[", it means we are first item => do not add separator
+		if rendered != "[" {
 			rendered += ",\n"
 		}
+
+		rendered += RenderContract(contract.id)
 	}
 	rendered += "]"
 	return rendered
