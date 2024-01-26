@@ -97,25 +97,26 @@ type Milestone struct {
 }
 
 type Contract struct {
-	id                 uint64
-	sender             string
-	contractor         string
-	funder             string // funder address
-	escrowToken        string // grc20 token
-	metadata           string // store data forforimage, tags, name, description, links for twitter/github...
-	status             ContractStatus
-	expireAt           uint64
-	funderFeedback     string
-	contractorFeedback string
-	milestones         []Milestone
-	pausedBy           string
-	conflictHandler    string // can be a realm path or a caller address
-	handlerCandidate   string // conflict handler candidate suggested by one party
-	handlerSuggestor   string // the suggestor off the conflict handler candidate
-	createdAt          uint64
-	budget             uint64
-	funded             bool
-	rejectReason       string
+	id                   uint64
+	sender               string
+	contractor           string
+	contractorCandidates []string
+	funder               string // funder address
+	escrowToken          string // grc20 token
+	metadata             string // store data forforimage, tags, name, description, links for twitter/github...
+	status               ContractStatus
+	expireAt             uint64
+	funderFeedback       string
+	contractorFeedback   string
+	milestones           []Milestone
+	pausedBy             string
+	conflictHandler      string // can be a realm path or a caller address
+	handlerCandidate     string // conflict handler candidate suggested by one party
+	handlerSuggestor     string // the suggestor off the conflict handler candidate
+	createdAt            uint64
+	budget               uint64
+	funded               bool
+	rejectReason         string
 }
 
 // Escrow State
@@ -414,8 +415,39 @@ func SubmitFunder(contractId uint64) {
 	contracts[contractId].funder = caller.String()
 }
 
-// Submit candidate as a contractor
-func SubmitContractor(contractId uint64) {
+// Accept candidate as a contractor
+func AcceptContractor(contractId uint64, contractor string) {
+	caller := std.GetOrigCaller()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+
+	if contract.status != CREATED {
+		panic("can only submit candidate to a CREATED contract")
+	}
+
+	if contract.contractor != "" {
+		panic("the contract has already a contractor")
+	}
+
+	if caller.String() != contract.funder {
+		panic("Only contract funder can accept contractor")
+	}
+
+	candidates := contracts[contractId].contractorCandidates
+	for _, candidate := range candidates {
+		// Accept the contract if the address already submitted candidate request
+		if candidate == contractor {
+			contracts[contractId].status = ACCEPTED
+		}
+	}
+
+	contracts[contractId].contractor = contractor
+}
+
+func SubmitContractorCandidate(contractId uint64) {
 	caller := std.GetOrigCaller()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
@@ -435,8 +467,14 @@ func SubmitContractor(contractId uint64) {
 		panic("you cannot become a contractor of your funded contract")
 	}
 
-	contracts[contractId].status = ACCEPTED
-	contracts[contractId].contractor = caller.String()
+	candidates := contracts[contractId].contractorCandidates
+	for _, candidate := range candidates {
+		if candidate == caller.String() {
+			panic("already a contractor candidate")
+		}
+	}
+
+	contracts[contractId].contractorCandidates = append(candidates, caller.String())
 }
 
 // Complete any milestone in review status and pay the needed amount
@@ -802,10 +840,17 @@ func RenderContract(contractId uint64) string {
 	}
 	milestonesText := strings.Join(milestoneEncodes, ",\n")
 
+	contractorCandidates = []string{}
+	for _, candidate := range c.contractorCandidates {
+		contractorCandidates = append(contractorCandidates, "\""+candidate+"\"")
+	}
+	contractorCandidatesText = strings.Join(contractorCandidates, ",")
+
 	return fmt.Sprintf(`{
 		"id": %d,
 		"sender": "%s",
 		"contractor": "%s",
+		"contractorCandidates": [%s],
 		"funder": "%s",
 		"escrowToken": "%s",
 		"metadata": "%s",
@@ -821,7 +866,7 @@ func RenderContract(contractId uint64) string {
 		"budget": %d,
 		"funded": %t,
 		"rejectReason": "%s"
-}`, c.id, c.sender, c.contractor, c.funder, c.escrowToken, strings.ReplaceAll(c.metadata, "\"", "\\\""), c.status.String(),
+}`, c.id, c.sender, c.contractor, contractorCandidatesText, c.funder, c.escrowToken, strings.ReplaceAll(c.metadata, "\"", "\\\""), c.status.String(),
 		c.expireAt, c.funderFeedback, c.contractorFeedback,
 		milestonesText, c.pausedBy,
 		c.conflictHandler, c.handlerCandidate, c.handlerSuggestor, c.budget, c.funded, c.rejectReason)
