@@ -140,7 +140,7 @@ func CreateContract(
 	milestonePriorities string,
 	conflictHandler string,
 ) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if expiryDuration == 0 {
 		panic("invalid expiryDuration")
 	}
@@ -246,7 +246,7 @@ func CreateContract(
 }
 
 func CancelContract(contractId uint64) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -264,7 +264,7 @@ func CancelContract(contractId uint64) {
 }
 
 func RejectContract(contractId uint64, rejectReason string) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -287,7 +287,7 @@ func RejectContract(contractId uint64, rejectReason string) {
 }
 
 func AcceptContract(contractId uint64) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -312,7 +312,7 @@ func AcceptContract(contractId uint64) {
 }
 
 func PauseContract(contractId uint64) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -330,7 +330,7 @@ func PauseContract(contractId uint64) {
 }
 
 func ResumeContract(contractId uint64) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -349,7 +349,7 @@ func ResumeContract(contractId uint64) {
 
 // pay partial amount for the milestone
 func PayPartialMilestone(contractId uint64, milestoneId uint64, amount uint64) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -377,9 +377,9 @@ func PayPartialMilestone(contractId uint64, milestoneId uint64, amount uint64) {
 	contracts[contractId].milestones[milestoneId].paid += amount
 }
 
-// Submit candidate as a funder
-func SubmitFunder(contractId uint64) {
-	caller := std.GetOrigCaller()
+// Submit a funder by putting funds for specific milestones
+func SubmitFunder(contractId uint64, fundingMilestoneIds string) {
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -398,16 +398,29 @@ func SubmitFunder(contractId uint64) {
 		panic("you cannot become a funder of your requested contract")
 	}
 
+	milestoneIdsAddr := strings.Split(fundingMilestoneIds, ",")
+	if fundingMilestoneIds == "" {
+		panic("should fund at least one milestone when submitting a funder")
+	}
+
 	// Deposit needed amount to contract to become funder
-	projectBudget := uint64(0)
-	for _, milestone := range contract.milestones {
-		projectBudget += milestone.amount
+	budget := uint64(0)
+	for _, milestoneIdStr := range milestoneIdsAddr {
+		milestoneId, err := strconv.Atoi(milestoneIdStr)
+		if err != nil {
+			panic(err)
+		}
+		if milestoneId >= len(contract.milestones) || milestoneId < 0 {
+			panic("invalid milestoneId")
+		}
+		milestone := contract.milestones[milestoneId]
+		budget += milestone.amount
 	}
 
 	tori20.TransferFrom(
 		users.AddressOrName(caller.String()),
 		users.AddressOrName(std.CurrentRealm().Addr().String()),
-		projectBudget,
+		budget,
 	)
 
 	contracts[contractId].funded = true
@@ -417,7 +430,7 @@ func SubmitFunder(contractId uint64) {
 
 // Accept candidate as a contractor
 func AcceptContractor(contractId uint64, contractor string) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -448,7 +461,7 @@ func AcceptContractor(contractId uint64, contractor string) {
 }
 
 func SubmitContractorCandidate(contractId uint64) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -479,7 +492,7 @@ func SubmitContractorCandidate(contractId uint64) {
 
 // Complete any milestone in review status and pay the needed amount
 func CompleteMilestoneAndPay(contractId uint64, milestoneId uint64) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -524,7 +537,7 @@ func CompleteMilestoneAndPay(contractId uint64, milestoneId uint64) {
 
 // Set milestone status
 func ChangeMilestoneStatus(contractId uint64, milestoneId int, newStatus MilestoneStatus) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -551,13 +564,23 @@ func ChangeMilestoneStatus(contractId uint64, milestoneId int, newStatus Milesto
 		panic("milestone is already completed")
 	}
 
-	// TODO: Send fund when funder set project to completed
+	// Send fund when funder set project to completed
+	if newStatus == MS_COMPLETED {
+		// Pay the milestone
+		unpaid := milestone.amount - milestone.paid
+		if unpaid > 0 {
+			tori20.Transfer(
+				users.AddressOrName(contract.contractor),
+				unpaid)
+			contracts[contractId].milestones[milestoneId].paid += unpaid
+		}
+	}
 	contracts[contractId].milestones[milestoneId].status = newStatus
 }
 
 // fund milestone
 func FundMilestone(contractId uint64, milestoneId uint64) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -594,7 +617,7 @@ func AddUpcomingMilestone(
 	duration uint64,
 	link string,
 ) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -623,7 +646,7 @@ func AddUpcomingMilestone(
 }
 
 func CancelUpcomingMilestone(contractId uint64, milestoneId uint64) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -649,7 +672,7 @@ func CancelUpcomingMilestone(contractId uint64, milestoneId uint64) {
 }
 
 func CompleteContract(contractId uint64) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -673,7 +696,7 @@ func CompleteContract(contractId uint64) {
 }
 
 func SuggestConflictHandler(contractId uint64, conflictHandler string) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -692,7 +715,7 @@ func SuggestConflictHandler(contractId uint64, conflictHandler string) {
 }
 
 func ApproveConflictHandler(contractId uint64, conflictHandler string) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -713,7 +736,7 @@ func ApproveConflictHandler(contractId uint64, conflictHandler string) {
 }
 
 func CompleteContractByConflictHandler(contractId uint64, milestoneId uint64, contractorAmount uint64) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
@@ -763,7 +786,7 @@ func CompleteContractByConflictHandler(contractId uint64, milestoneId uint64, co
 }
 
 func GiveFeedback(contractId uint64, feedback string) {
-	caller := std.GetOrigCaller()
+	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
 	}
