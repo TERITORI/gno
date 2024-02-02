@@ -8,7 +8,7 @@ import (
 
 const APPROVED_UNREGISTER_CALLER = "g1sqt92sa06ugh8nlt98kyghw83qy84paf4csyh6"
 
-var registered = []GRC20Pair{}
+var registered = []TokenInfo{}
 
 type GRC20Interface interface {
 	Transfer() func(to users.AddressOrName, amount uint64)
@@ -16,14 +16,15 @@ type GRC20Interface interface {
 	BalanceOf() func(owner users.AddressOrName) uint64
 }
 
-type GRC20Pair struct {
-	pkgPath string
-	igrc20  GRC20Interface
+type TokenInfo struct {
+	isBank bool
+	token  string // token | denom
+	igrc20 GRC20Interface
 }
 
-func findGRC20(pkgPath string) (int, bool) {
+func findToken(token string) (int, bool) {
 	for i, pair := range registered {
-		if pair.pkgPath == pkgPath {
+		if pair.token == token {
 			return i, true
 		}
 	}
@@ -32,11 +33,15 @@ func findGRC20(pkgPath string) (int, bool) {
 }
 
 func appendGRC20Interface(pkgPath string, igrc20 GRC20Interface) {
-	registered = append(registered, GRC20Pair{pkgPath: pkgPath, igrc20: igrc20})
+	registered = append(registered, TokenInfo{isBank: false, token: pkgPath, igrc20: igrc20})
 }
 
-func removeGRC20Interface(pkgPath string) {
-	i, found := findGRC20(pkgPath)
+func appendBankToken(denom string) {
+	registered = append(registered, TokenInfo{isBank: true, token: token})
+}
+
+func removeToken(token string) {
+	i, found := findToken(token)
 	if !found {
 		return
 	}
@@ -44,16 +49,16 @@ func removeGRC20Interface(pkgPath string) {
 	registered = append(registered[:i], registered[i+1:]...)
 }
 
-func RegisterGRC20Interface(pkgPath string, igrc20 GRC20Interface) {
-	_, found := findGRC20(pkgPath)
+func RegisterGRC20Interface(token string, igrc20 GRC20Interface) {
+	_, found := findToken(token)
 	if found {
 		panic("GRC20 already registered")
 	}
 
-	appendGRC20Interface(pkgPath, igrc20)
+	appendGRC20Interface(token, igrc20)
 }
 
-func UnregisterGRC20Interface(pkgPath string) {
+func UnregisterToken(token string) {
 	// do not allow realm to unregister
 	std.AssertOriginCall()
 	caller := std.GetOrigCaller()
@@ -62,40 +67,71 @@ func UnregisterGRC20Interface(pkgPath string) {
 		panic("unauthorized")
 	}
 
-	_, found := findGRC20(pkgPath)
+	_, found := findToken(token)
 	if found {
-		removeGRC20Interface(pkgPath)
+		removeToken(token)
 	}
 }
 
-func TransferByInterfaceName(pkgPath string, to std.Address, amount uint64) bool {
-	i, found := findGRC20(pkgPath)
+func RegisterBankToken(denom string) {
+	_, found := findToken(denom)
+	if found {
+		panic("Token already registered")
+	}
+
+	appendBankToken(denom)
+}
+
+func TransferByInterfaceName(token string, to std.Address, amount uint64) bool {
+	i, found := findToken(token)
 	if !found {
 		return false
 	}
 
+	if registered[i].isBank {
+		banker := std.GetBanker(std.BankerTypeOrigSend)
+
+		coin := std.Coins{{token, amount}}
+		realmAddr := std.GetOrigPkgAddr()
+
+		// Send coin from realm
+		banker.SendCoins(realmAddr, to, coin)
+		return true
+	}
 	registered[i].igrc20.Transfer()(users.AddressOrName(to), amount)
 
 	return true
 }
 
-func TransferFromByInterfaceName(pkgPath string, from, to std.Address, amount uint64) bool {
-	i, found := findGRC20(pkgPath)
+func TransferFromByInterfaceName(token string, from, to std.Address, amount uint64) bool {
+	i, found := findToken(token)
 	if !found {
 		return false
 	}
 
+	if registered[i].isBank {
+		panic("TransferFrom's not enabled for native token")
+	}
 	registered[i].igrc20.TransferFrom()(users.AddressOrName(from), users.AddressOrName(to), amount)
 
 	return true
 }
 
-func BalanceOfByInterfaceName(pkgPath string, owner std.Address) uint64 {
-	i, found := findGRC20(pkgPath)
+func BalanceOfByInterfaceName(token string, owner std.Address) uint64 {
+	i, found := findToken(token)
 	if !found {
 		return 0
 	}
 
+	if registered[i].isBank {
+		coins := banker.GetCoins(owner)
+		for _, coin := range coins {
+			if coin.denom == token {
+				return coin.amount
+			}
+		}
+		return 0
+	}
 	balance := registered[i].igrc20.BalanceOf()(users.AddressOrName(owner))
 	return balance
 }
