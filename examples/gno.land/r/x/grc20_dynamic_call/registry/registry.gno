@@ -126,8 +126,8 @@ func BalanceOfByInterfaceName(token string, owner std.Address) uint64 {
 	if registered[i].isBank {
 		coins := banker.GetCoins(owner)
 		for _, coin := range coins {
-			if coin.denom == token {
-				return coin.amount
+			if coin.Denom == token {
+				return coin.Amount
 			}
 		}
 		return 0
