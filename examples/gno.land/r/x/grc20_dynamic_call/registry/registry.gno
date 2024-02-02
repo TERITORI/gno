@@ -18,8 +18,8 @@ type GRC20Interface interface {
 
 type TokenInfo struct {
 	isBank bool
-	token  string // token | denom
-	igrc20 GRC20Interface
+	token  string         // pkgPath (GRC20) | denom (Bank)
+	igrc20 GRC20Interface // only valid when isBank is false
 }
 
 func findToken(token string) (int, bool) {
@@ -127,7 +127,7 @@ func BalanceOfByInterfaceName(token string, owner std.Address) uint64 {
 		coins := banker.GetCoins(owner)
 		for _, coin := range coins {
 			if coin.Denom == token {
-				return coin.Amount
+				return uint64(coin.Amount)
 			}
 		}
 		return 0
