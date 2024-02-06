@@ -37,7 +37,7 @@ func appendGRC20Interface(pkgPath string, igrc20 GRC20Interface) {
 }
 
 func appendBankToken(denom string) {
-	registered = append(registered, TokenInfo{isBank: true, token: token})
+	registered = append(registered, TokenInfo{isBank: true, token: denom})
 }
 
 func removeToken(token string) {
@@ -91,7 +91,7 @@ func TransferByInterfaceName(token string, to std.Address, amount uint64) bool {
 	if registered[i].isBank {
 		banker := std.GetBanker(std.BankerTypeOrigSend)
 
-		coin := std.Coins{{token, amount}}
+		coin := std.Coins{{token, int64(amount)}}
 		realmAddr := std.GetOrigPkgAddr()
 
 		// Send coin from realm
@@ -124,6 +124,7 @@ func BalanceOfByInterfaceName(token string, owner std.Address) uint64 {
 	}
 
 	if registered[i].isBank {
+		banker := std.GetBanker(std.BankerTypeOrigSend)
 		coins := banker.GetCoins(owner)
 		for _, coin := range coins {
 			if coin.Denom == token {

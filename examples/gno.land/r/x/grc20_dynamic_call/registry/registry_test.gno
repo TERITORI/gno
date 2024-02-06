@@ -144,7 +144,7 @@ func TestTransferFromByNameBAZ(t *testing.T) {
 }
 
 func TestUnregisterUnauthorized(t *testing.T) {
-	shouldPanic(t, func() { UnregisterGRC20Interface("gno.land/r/x/grc20_dynamic_call/foo") })
+	shouldPanic(t, func() { UnregisterToken("gno.land/r/x/grc20_dynamic_call/foo") })
 }
 
 func TestUnregisterAuthorized(t *testing.T) {
@@ -153,7 +153,7 @@ func TestUnregisterAuthorized(t *testing.T) {
 	}
 
 	std.TestSetOrigCaller("g1sqt92sa06ugh8nlt98kyghw83qy84paf4csyh6")
-	UnregisterGRC20Interface("gno.land/r/x/grc20_dynamic_call/foo")
+	UnregisterToken("gno.land/r/x/grc20_dynamic_call/foo")
 
 	if len(registered) != 2 {
 		t.Fatal("should have 2 registered interfaces")
