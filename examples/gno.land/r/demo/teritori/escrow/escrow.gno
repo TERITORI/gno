@@ -229,7 +229,6 @@ func CreateContract(
 		milestones:      milestones,
 		conflictHandler: conflictHandler,
 		budget:          projectBudget,
-		funded:          funded,
 		createdAt:       uint64(time.Now().Unix()),
 	})
 }
