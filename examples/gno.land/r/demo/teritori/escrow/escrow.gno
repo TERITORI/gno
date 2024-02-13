@@ -216,17 +216,6 @@ func CreateContract(
 		projectBudget += uint64(amount)
 	}
 
-	// If contract creator is funder then he needs to send all the needed fund to contract
-	funded := false
-	if caller.String() == funder {
-		tori20.TransferFrom(
-			users.AddressOrName(caller.String()),
-			users.AddressOrName(std.CurrentRealm().Addr().String()),
-			projectBudget)
-
-		funded = true
-	}
-
 	contractId := uint64(len(contracts))
 	contracts = append(contracts, Contract{
 		id:              contractId,
