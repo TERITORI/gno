@@ -863,11 +863,11 @@ func RenderContract(contractId uint64) string {
 	}
 	milestonesText := strings.Join(milestoneEncodes, ",\n")
 
-	contractorCandidates = []string{}
+	contractorCandidates := []string{}
 	for _, candidate := range c.contractorCandidates {
 		contractorCandidates = append(contractorCandidates, "\""+candidate+"\"")
 	}
-	contractorCandidatesText = strings.Join(contractorCandidates, ",")
+	contractorCandidatesText := strings.Join(contractorCandidates, ",")
 
 	return fmt.Sprintf(`{
 		"id": %d,
