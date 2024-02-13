@@ -82,6 +82,11 @@ func RegisterBankToken(denom string) {
 	appendBankToken(denom)
 }
 
+func RealmAddr() string {
+	realmAddr := std.GetOrigPkgAddr()
+	return realmAddr.String()
+}
+
 func TransferByInterfaceName(token string, to std.Address, amount uint64) bool {
 	i, found := findToken(token)
 	if !found {
