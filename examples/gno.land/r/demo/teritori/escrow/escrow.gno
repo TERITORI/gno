@@ -822,11 +822,11 @@ func RespondToConflict(contractId uint64, message string) {
 	conflict := contract.conflicts[conflictId]
 
 	if conflict.initiator == contract.funder {
-		if contract.funder != caller.String() {
+		if contract.contractor != caller.String() {
 			panic("only contract funder can respond to this conflict")
 		}
 	} else if conflict.initiator == contract.contractor {
-		if contract.contractor != caller.String() {
+		if contract.funder != caller.String() {
 			panic("only contract contractor can respond to this conflict")
 		}
 	} else {
@@ -834,7 +834,8 @@ func RespondToConflict(contractId uint64, message string) {
 	}
 
 	contracts[contractId].conflicts[conflictId].responseMessage = &message
-	contracts[contractId].conflicts[conflictId].respondedAt = &time.Now()
+	now := time.Now()
+	contracts[contractId].conflicts[conflictId].respondedAt = &now
 }
 
 func ResolveConflict(contractId uint64, outcome ConflictOutcome, resolutionMessage string) {
@@ -890,7 +891,8 @@ func ResolveConflict(contractId uint64, outcome ConflictOutcome, resolutionMessa
 
 	contracts[contractId].conflicts[conflictId].resolutionMessage = &resolutionMessage
 	contracts[contractId].conflicts[conflictId].outcome = &outcome
-	contracts[contractId].conflicts[conflictId].resolvedAt = &time.Now()
+	now := time.Now()
+	contracts[contractId].conflicts[conflictId].resolvedAt = &now
 }
 
 func CompleteContractByConflictHandler(contractId uint64, milestoneId uint64, contractorAmount uint64) {
