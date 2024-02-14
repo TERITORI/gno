@@ -7,6 +7,7 @@ import (
 	"time"
 
 	fmt "gno.land/p/demo/ufmt"
+	"gno.land/p/demo/teritori/ujson"
 	tori20 "gno.land/r/demo/tori20"
 	"gno.land/r/demo/users"
 )
@@ -20,7 +21,30 @@ const (
 	PAUSED    ContractStatus = 4
 	COMPLETED ContractStatus = 5
 	REJECTED  ContractStatus = 6
+	CONFLICT  ContractStatus = 7
+	ABORTED_IN_FAVOR_OF_CONTRACTOR   ContractStatus = 8
+	ABORTED_IN_FAVOR_OF_FUNDER   ContractStatus = 9
 )
+
+type ConflictOutcome uint32
+
+const (
+	RESUME_CONTRACT ConflictOutcome = 1
+	REFUND_FUNDER ConflictOutcome = 2
+	PAY_CONTRACTOR ConflictOutcome = 3
+)
+
+func (x ConflictOutcome) String() string {
+	switch x {
+	case RESUME_CONTRACT:
+		return "RESUME_CONTRACT"
+	case REFUND_FUNDER:
+		return "REFUND_FUNDER"
+	case PAY_CONTRACTOR:
+		return "PAY_CONTRACTOR"
+	}
+	return "UNKNOWN"
+}
 
 func (x ContractStatus) String() string {
 	switch x {
@@ -36,6 +60,12 @@ func (x ContractStatus) String() string {
 		return "COMPLETED"
 	case REJECTED:
 		return "REJECTED"
+	case CONFLICT:
+		return "CONFLICT"
+	case ABORTED_IN_FAVOR_OF_CONTRACTOR:
+		return "ABORTED_IN_FAVOR_OF_CONTRACTOR"
+	case ABORTED_IN_FAVOR_OF_FUNDER:
+		return "ABORTED_IN_FAVOR_OF_FUNDER"
 	}
 	return "UNKNOWN"
 }
@@ -96,6 +126,17 @@ type Milestone struct {
 	status   MilestoneStatus
 }
 
+type Conflict struct {
+	initiator std.Address
+	createdAt time.Time
+	respondedAt *time.Time
+	resolvedAt *time.Time
+	initiatorMessage string
+	responseMessage *string
+	resolutionMessage *string
+	outcome *ConflictOutcome
+}
+
 type Contract struct {
 	id                   uint64
 	sender               string
@@ -117,6 +158,7 @@ type Contract struct {
 	budget               uint64
 	funded               bool
 	rejectReason         string
+	conflicts			 []Conflict
 }
 
 // Escrow State
@@ -219,11 +261,11 @@ func CreateContract(
 	// If contract creator is funder then he needs to send all the needed fund to contract
 	funded := false
 	if caller.String() == funder {
-		tori20.TransferFrom(
-			users.AddressOrName(caller.String()),
-			users.AddressOrName(std.CurrentRealm().Addr().String()),
-			projectBudget)
-
+		sent := std.GetOrigSend()
+		amount := sent.AmountOf(escrowToken)
+		if amount != projectBudget {
+			panic("funder should send all the needed funds at instantiation")
+		}
 		funded = true
 	}
 
@@ -240,8 +282,8 @@ func CreateContract(
 		milestones:      milestones,
 		conflictHandler: conflictHandler,
 		budget:          projectBudget,
-		funded:          funded,
 		createdAt:       uint64(time.Now().Unix()),
+		funded:			 funded,
 	})
 }
 
@@ -514,9 +556,11 @@ func CompleteMilestoneAndPay(contractId uint64, milestoneId uint64) {
 	// Pay the milestone
 	unpaid := milestone.amount - milestone.paid
 	if unpaid > 0 {
-		tori20.Transfer(
-			users.AddressOrName(contract.contractor),
-			unpaid)
+		banker := std.GetBanker(std.BankerTypeRealmSend)
+		banker.SendCoins(
+			std.CurrentRealm().Addr(),
+			std.Address(contract.contractor),
+			std.Coins{std.Coin{contract.escrowToken, int64(unpaid)}})
 		contracts[contractId].milestones[milestoneId].paid += unpaid
 	}
 
@@ -735,6 +779,120 @@ func ApproveConflictHandler(contractId uint64, conflictHandler string) {
 	contracts[contractId].conflictHandler = conflictHandler
 }
 
+func RequestConflictResolution(contractId uint64, message string) {
+	caller := std.PrevRealm().Addr()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+	if contract.funder != caller.String() && contract.contractor != caller.String() {
+		panic("only contract participants can request conflict resolution")
+	}
+
+	if contract.status != ACCEPTED {
+		panic("conflict resolution can only be requested at ACCEPTED status")
+	}
+
+	contracts[contractId].status = CONFLICT
+
+	contracts[contractId].conflicts = append(contract.conflicts, Conflict{
+		initiator: caller,
+		createdAt: time.Now(),
+		initiatorMessage: message,
+	})
+}
+
+func RespondToConflict(contractId uint64, message string) {
+	caller := std.PrevRealm().Addr()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+	if contract.status != CONFLICT {
+		panic("conflict can only be responded at CONFLICT status")
+	}
+
+	if len(contract.conflicts) == 0 {
+		panic("no conflict exists, this should not happen")
+	}
+
+	conflictId := len(contract.conflicts) - 1
+	conflict := contract.conflicts[conflictId]
+
+	if conflict.initiator == contract.funder {
+		if contract.funder != caller.String() {
+			panic("only contract funder can respond to this conflict")
+		}
+	} else if conflict.initiator == contract.contractor {
+		if contract.contractor != caller.String() {
+			panic("only contract contractor can respond to this conflict")
+		}
+	} else {
+		panic("conflict initiator is not valid")
+	}
+
+	contracts[contractId].conflicts[conflictId].responseMessage = &message
+	contracts[contractId].conflicts[conflictId].respondedAt = &time.Now()
+}
+
+func ResolveConflict(contractId uint64, outcome ConflictOutcome, resolutionMessage string) {
+	caller := std.PrevRealm().Addr()
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	contract := contracts[contractId]
+	if contract.conflictHandler != caller.String() {
+		panic("only conflictHandler is allowed for this operation")
+	}
+
+	if contract.status != CONFLICT {
+		panic("conflict can only be resolved at CONFLICT status")
+	}
+
+	if len(contract.conflicts) == 0 {
+		panic("no conflict exists")
+	}
+
+	conflictId := len(contract.conflicts) - 1
+	conflict := contract.conflicts[conflictId]
+
+	switch outcome {
+	case RESUME_CONTRACT:
+		contracts[contractId].status = ACCEPTED
+	case REFUND_FUNDER:
+		totalPaid := uint64(0)
+		for _, milestone := range contract.milestones {
+			totalPaid += milestone.paid
+		}
+		banker := std.GetBanker(std.BankerTypeRealmSend)
+		banker.SendCoins(
+			std.CurrentRealm().Addr(),
+			std.Address(contract.funder),
+			std.Coins{std.Coin{contract.escrowToken, int64(contract.budget - totalPaid)}})
+			contracts[contractId].status = ABORTED_IN_FAVOR_OF_FUNDER
+	case PAY_CONTRACTOR:
+		totalPaid := uint64(0)
+		for _, milestone := range contract.milestones {
+			totalPaid += milestone.paid
+		}
+		banker := std.GetBanker(std.BankerTypeRealmSend)
+		banker.SendCoins(
+			std.CurrentRealm().Addr(),
+			std.Address(contract.contractor),
+			std.Coins{std.Coin{contract.escrowToken, int64(contract.budget - totalPaid)}})
+		contracts[contractId].status = ABORTED_IN_FAVOR_OF_CONTRACTOR
+	default:
+		panic("invalid outcome")
+	}
+
+	contracts[contractId].conflicts[conflictId].resolutionMessage = &resolutionMessage
+	contracts[contractId].conflicts[conflictId].outcome = &outcome
+	contracts[contractId].conflicts[conflictId].resolvedAt = &time.Now()
+}
+
 func CompleteContractByConflictHandler(contractId uint64, milestoneId uint64, contractorAmount uint64) {
 	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
@@ -847,6 +1005,20 @@ func GetContracts(startAfter, limit uint64, filterByFunder string, filterByContr
 	return results
 }
 
+func formatTime(t *time.Time) string {
+	if t == nil {
+		return "null"
+	}
+	return fmt.Sprintf("%d", t.Unix())
+}
+
+func formatStringPtr(s *string) string {
+	if s == nil {
+		return "null"
+	}
+	return ujson.FormatString(*s)
+}
+
 func RenderContract(contractId uint64) string {
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
@@ -877,6 +1049,34 @@ func RenderContract(contractId uint64) string {
 	}
 	contractorCandidatesText := strings.Join(contractorCandidates, ",")
 
+	conflictsStrings := []string{}
+	for _, conflict := range c.conflicts {
+		outcomeString := "null"
+		if conflict.outcome != nil {
+			outcomeString = ujson.FormatString(conflict.outcome.String())
+		}
+		conflictsStrings = append(conflictsStrings, fmt.Sprintf(
+			`{
+				"initiator": %s,
+				"createdAt": %s,
+				"respondedAt": %s,
+				"resolvedAt": %s,
+				"initiatorMessage": %s,
+				"responseMessage": %s,
+				"resolutionMessage": %s,
+				"outcome": %s
+			}`,
+			ujson.FormatAny(conflict.initiator),
+			formatTime(&conflict.createdAt),
+			formatTime(conflict.respondedAt),
+			formatTime(conflict.resolvedAt),
+			ujson.FormatString(conflict.initiatorMessage),
+			formatStringPtr(conflict.responseMessage),
+			formatStringPtr(conflict.resolutionMessage),
+			outcomeString,
+		))
+	}
+
 	return fmt.Sprintf(`{
 		"id": %d,
 		"sender": "%s",
@@ -894,13 +1094,14 @@ func RenderContract(contractId uint64) string {
 		"conflictHandler": "%s",
 		"handlerCandidate": "%s",
 		"handlerSuggestor": "%s",
+		"conflicts": [%s],
 		"budget": %d,
 		"funded": %t,
 		"rejectReason": "%s"
 }`, c.id, c.sender, c.contractor, contractorCandidatesText, c.funder, c.escrowToken, strings.ReplaceAll(c.metadata, "\"", "\\\""), c.status.String(),
 		c.expireAt, c.funderFeedback, c.contractorFeedback,
 		milestonesText, c.pausedBy,
-		c.conflictHandler, c.handlerCandidate, c.handlerSuggestor, c.budget, c.funded, c.rejectReason)
+		c.conflictHandler, c.handlerCandidate, c.handlerSuggestor, strings.Join(conflictsStrings, ","), c.budget, c.funded, c.rejectReason)
 }
 
 func RenderContracts(startAfter uint64, limit uint64, filterByFunder string, filterByContractor string) string {
