@@ -7,6 +7,7 @@ import (
 	"time"
 
 	fmt "gno.land/p/demo/ufmt"
+	"gno.land/p/demo/teritori/ujson"
 	tori20 "gno.land/r/demo/tori20"
 	"gno.land/r/demo/users"
 )
@@ -32,6 +33,18 @@ const (
 	REFUND_FUNDER ConflictOutcome = 2
 	PAY_CONTRACTOR ConflictOutcome = 3
 )
+
+func (x ConflictOutcome) String() string {
+	switch x {
+	case RESUME_CONTRACT:
+		return "RESUME_CONTRACT"
+	case REFUND_FUNDER:
+		return "REFUND_FUNDER"
+	case PAY_CONTRACTOR:
+		return "PAY_CONTRACTOR"
+	}
+	return "UNKNOWN"
+}
 
 func (x ContractStatus) String() string {
 	switch x {
@@ -984,6 +997,20 @@ func GetContracts(startAfter, limit uint64, filterByFunder string, filterByContr
 	return results
 }
 
+func formatTime(t *time.Time) string {
+	if t == nil {
+		return "null"
+	}
+	return fmt.Sprintf("%d", t.Unix())
+}
+
+func formatStringPtr(s *string) string {
+	if s == nil {
+		return "null"
+	}
+	return ujson.FormatString(*s)
+}
+
 func RenderContract(contractId uint64) string {
 	if int(contractId) >= len(contracts) {
 		panic("invalid contract id")
@@ -1014,6 +1041,34 @@ func RenderContract(contractId uint64) string {
 	}
 	contractorCandidatesText := strings.Join(contractorCandidates, ",")
 
+	conflictsStrings := []string{}
+	for _, conflict := range c.conflicts {
+		outcomeString := "null"
+		if conflict.outcome != nil {
+			outcomeString = ujson.FormatString(conflict.outcome.String())
+		}
+		conflictsStrings = append(conflictsStrings, fmt.Sprintf(
+			`{
+				"initiator": %s,
+				"createdAt": %s,
+				"respondedAt": %s,
+				"resolvedAt": %s,
+				"initiatorMessage": %s,
+				"responseMessage": %s,
+				"resolutionMessage": %s,
+				"outcome": %s
+			}`,
+			ujson.FormatAny(conflict.initiator),
+			formatTime(&conflict.createdAt),
+			formatTime(conflict.respondedAt),
+			formatTime(conflict.resolvedAt),
+			ujson.FormatString(conflict.initiatorMessage),
+			formatStringPtr(conflict.responseMessage),
+			formatStringPtr(conflict.resolutionMessage),
+			outcomeString,
+		))
+	}
+
 	return fmt.Sprintf(`{
 		"id": %d,
 		"sender": "%s",
@@ -1031,13 +1086,14 @@ func RenderContract(contractId uint64) string {
 		"conflictHandler": "%s",
 		"handlerCandidate": "%s",
 		"handlerSuggestor": "%s",
+		"conflicts": [%s],
 		"budget": %d,
 		"funded": %t,
 		"rejectReason": "%s"
 }`, c.id, c.sender, c.contractor, contractorCandidatesText, c.funder, c.escrowToken, strings.ReplaceAll(c.metadata, "\"", "\\\""), c.status.String(),
 		c.expireAt, c.funderFeedback, c.contractorFeedback,
 		milestonesText, c.pausedBy,
-		c.conflictHandler, c.handlerCandidate, c.handlerSuggestor, c.budget, c.funded, c.rejectReason)
+		c.conflictHandler, c.handlerCandidate, c.handlerSuggestor, strings.Join(conflictsStrings, ","), c.budget, c.funded, c.rejectReason)
 }
 
 func RenderContracts(startAfter uint64, limit uint64, filterByFunder string, filterByContractor string) string {
