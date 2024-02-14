@@ -805,6 +805,14 @@ func GiveFeedback(contractId uint64, feedback string) {
 	}
 }
 
+func GetContractorCandidates(contractId uint64) string {
+	if int(contractId) >= len(contracts) {
+		panic("invalid contract id")
+	}
+
+	return strings.Join(contracts[contractId].contractorCandidates, ",")
+}
+
 func GetContracts(startAfter, limit uint64, filterByFunder string, filterByContractor string) []Contract {
 	max := uint64(len(contracts))
 	if startAfter+limit < max {
