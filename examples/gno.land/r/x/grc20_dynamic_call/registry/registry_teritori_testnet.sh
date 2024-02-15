@@ -12,6 +12,17 @@ GOPHER=g1x2xyqca98auaw9lnat2h9ycd4lx3w0jer9vjmt
 # check balance
 gnokey query bank/balances/$TERITORI -remote="51.15.236.215:26657"
 
+# Send 10 GNOT to realm address
+gnokey maketx send  \
+  -send="10000000ugnot" \
+  -to="g1zeqyg0q5e7m7sr3grzhsq7qpmqymx6uqatts0u" \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  teritori
+
 gnokey maketx addpkg  \
   -deposit="1ugnot" \
   -gas-fee="1ugnot" \
@@ -46,63 +57,111 @@ gnokey maketx call \
   -args="ugnot" \
   teritori
 
-# # Set feeders
-# gnokey maketx call \
-#   -gas-fee="1ugnot" \
-#   -gas-wanted="5000000" \
-#   -broadcast="true" \
-#   -remote="51.15.236.215:26657" \
-#   -chainid="teritori-1" \
-#   -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_01" \
-#   -func="SetFeeders" \
-#   -args="$TERITORI" \
-#   teritori
+# Register GRC20 token while deploying
+gnokey maketx addpkg  \
+  -deposit="1ugnot" \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgdir="./examples/gno.land/r/x/grc20_dynamic_call/bar" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/bar" \
+  teritori
 
-# # Request Random Words
-# gnokey maketx call \
-#   -gas-fee="1ugnot" \
-#   -gas-wanted="5000000" \
-#   -broadcast="true" \
-#   -remote="51.15.236.215:26657" \
-#   -chainid="teritori-1" \
-#   -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_01" \
-#   -func="RequestRandomWords" \
-#   -args="1" \
-#   teritori
+gnokey maketx addpkg  \
+  -deposit="1ugnot" \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgdir="./examples/gno.land/r/x/grc20_dynamic_call/foo" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/foo" \
+  teritori
 
-# # Fulfill Random Words
-# gnokey maketx call \
-#   -gas-fee="1ugnot" \
-#   -gas-wanted="5000000" \
-#   -broadcast="true" \
-#   -remote="51.15.236.215:26657" \
-#   -chainid="teritori-1" \
-#   -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_01" \
-#   -func="FulfillRandomWords" \
-#   -args="0" \
-#   -args="f440c4980357d8b56db87ddd50f06bd551f1319a" \
-#   teritori
+# Get Faucet
+gnokey maketx call \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/foo" \
+  -func="Faucet" \
+  teritori
 
-# # Query config
-# gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_01
-# RenderConfig()" -remote="51.15.236.215:26657"
+# Transfer to realm
+gnokey maketx call \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/foo" \
+  -func="Transfer" \
+  -args="g1zeqyg0q5e7m7sr3grzhsq7qpmqymx6uqatts0u" \
+  -args="5000000" \
+  teritori
 
-# # Query Requests
-# gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_01
-# RenderRequests(0, 10)" -remote="51.15.236.215:26657"
+# Deploy baz
+gnokey maketx addpkg  \
+  -deposit="1ugnot" \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgdir="./examples/gno.land/r/x/grc20_dynamic_call/baz" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/baz" \
+  teritori
 
-# # Query request
-# gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_01
-# RenderRequest(0)" -remote="51.15.236.215:26657"
+# Deploy wrapper & register to registry
+gnokey maketx addpkg  \
+  -deposit="1ugnot" \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgdir="./examples/gno.land/r/x/grc20_dynamic_call/wrapper" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/wrapper" \
+  teritori
 
-# # Query IsFeeder
-# gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_01
-# IsFeeder(\"$TERITORI\")" -remote="51.15.236.215:26657"
+# Transfer ugnot (0.1GNOT to TERITORI)
+gnokey maketx call \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_01" \
+  -func="TransferByInterfaceName" \
+  -args="ugnot" \
+  -args="$TERITORI" \
+  -args="100000" \
+  teritori
 
-# # Query RandomValueFromWordsWithIndex
-# gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_01
-# RandomValueFromWordsWithIndex(0, 0)" -remote="51.15.236.215:26657"
+# Transfer foo (0.1FOO to TERITORI)
+gnokey maketx call \
+  -gas-fee="1ugnot" \
+  -gas-wanted="5000000" \
+  -broadcast="true" \
+  -remote="51.15.236.215:26657" \
+  -chainid="teritori-1" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_01" \
+  -func="TransferByInterfaceName" \
+  -args="foo" \
+  -args="$TERITORI" \
+  -args="100000" \
+  teritori
 
 # Query RealmAddr
 gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_01
 RealmAddr()" -remote="51.15.236.215:26657"
+
+gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_01
+BalanceOfByInterfaceName(\"ugnot\",\"g1zeqyg0q5e7m7sr3grzhsq7qpmqymx6uqatts0u\")" -remote="51.15.236.215:26657"
+
+gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_01
+BalanceOfByInterfaceName(\"foo\",\"g1zeqyg0q5e7m7sr3grzhsq7qpmqymx6uqatts0u\")" -remote="51.15.236.215:26657"
