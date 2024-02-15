@@ -10,18 +10,14 @@ import (
 )
 
 var (
-	foo   *grc20.AdminToken
+	tori   *grc20.AdminToken
 	admin std.Address = "g1us8428u2a5satrlxzagqqa5m6vmuze025anjlj" // TODO: helper to change admin
 )
 
 func init() {
-	foo = grc20.NewAdminToken("Foo", "FOO", 4)
-	foo.Mint(admin, 1000000*10000)                                    // @administrator (1M)
-	foo.Mint("g1u7y667z64x2h7vc6fmpcprgey4ck233jaww9zq", 10000*10000) // @manfred (10k)
-
-	// My accounts
-	foo.Mint("g1jg8mtutu9khhfwc4nxmuhcpftf0pajdhfvsqf5", 10000*10000) // @Yo account 1 (10k)
-	foo.Mint("g1kcdd3n0d472g2p5l8svyg9t0wq6h5857nq992f", 10000*10000) // @Yo account 2 (10k)
+	tori = grc20.NewAdminToken("tori", "tori", 4)
+	tori.Mint(admin, 1000000*10000)                                    // @administrator (1M)
+	tori.Mint("g1u7y667z64x2h7vc6fmpcprgey4ck233jaww9zq", 10000*10000) // @manfred (10k)
 }
 
 // method proxies as public functions.
@@ -30,11 +26,11 @@ func init() {
 // getters.
 
 func TotalSupply() uint64 {
-	return foo.TotalSupply()
+	return tori.TotalSupply()
 }
 
 func BalanceOf(owner users.AddressOrName) uint64 {
-	balance, err := foo.BalanceOf(owner.Resolve())
+	balance, err := tori.BalanceOf(owner.Resolve())
 	if err != nil {
 		panic(err)
 	}
@@ -42,7 +38,7 @@ func BalanceOf(owner users.AddressOrName) uint64 {
 }
 
 func Allowance(owner, spender users.AddressOrName) uint64 {
-	allowance, err := foo.Allowance(owner.Resolve(), spender.Resolve())
+	allowance, err := tori.Allowance(owner.Resolve(), spender.Resolve())
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +49,7 @@ func Allowance(owner, spender users.AddressOrName) uint64 {
 
 func Transfer(to users.AddressOrName, amount uint64) {
 	caller := std.PrevRealm().Addr()
-	err := foo.Transfer(caller, to.Resolve(), amount)
+	err := tori.Transfer(caller, to.Resolve(), amount)
 	if err != nil {
 		panic(err)
 	}
@@ -61,7 +57,7 @@ func Transfer(to users.AddressOrName, amount uint64) {
 
 func Approve(spender users.AddressOrName, amount uint64) {
 	caller := std.PrevRealm().Addr()
-	err := foo.Approve(caller, spender.Resolve(), amount)
+	err := tori.Approve(caller, spender.Resolve(), amount)
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +65,7 @@ func Approve(spender users.AddressOrName, amount uint64) {
 
 func TransferFrom(from, to users.AddressOrName, amount uint64) {
 	caller := std.PrevRealm().Addr()
-	err := foo.TransferFrom(caller, from.Resolve(), to.Resolve(), amount)
+	err := tori.TransferFrom(caller, from.Resolve(), to.Resolve(), amount)
 	if err != nil {
 		panic(err)
 	}
@@ -81,7 +77,7 @@ func Faucet() {
 	// FIXME: add limits?
 	// FIXME: add payment in gnot?
 	caller := std.PrevRealm().Addr()
-	err := foo.Mint(caller, 1000*10000) // 1k
+	err := tori.Mint(caller, 1000*10000) // 1k
 	if err != nil {
 		panic(err)
 	}
@@ -92,7 +88,7 @@ func Faucet() {
 func Mint(address users.AddressOrName, amount uint64) {
 	caller := std.PrevRealm().Addr()
 	assertIsAdmin(caller)
-	err := foo.Mint(address.Resolve(), amount)
+	err := tori.Mint(address.Resolve(), amount)
 	if err != nil {
 		panic(err)
 	}
@@ -101,7 +97,7 @@ func Mint(address users.AddressOrName, amount uint64) {
 func Burn(address users.AddressOrName, amount uint64) {
 	caller := std.PrevRealm().Addr()
 	assertIsAdmin(caller)
-	err := foo.Burn(address.Resolve(), amount)
+	err := tori.Burn(address.Resolve(), amount)
 	if err != nil {
 		panic(err)
 	}
@@ -116,10 +112,10 @@ func Render(path string) string {
 
 	switch {
 	case path == "":
-		return foo.RenderHome()
+		return tori.RenderHome()
 	case c == 2 && parts[0] == "balance":
 		owner := users.AddressOrName(parts[1])
-		balance, _ := foo.BalanceOf(owner.Resolve())
+		balance, _ := tori.BalanceOf(owner.Resolve())
 		return ufmt.Sprintf("%d\n", balance)
 	default:
 		return "404\n"

@@ -244,7 +244,6 @@ func CreateContract(
 	milestonePriorities string,
 	conflictHandler string,
 ) {
-	/* FIXME: upgrade gno
 	if !contractor.IsValid() {
 		panic("invalid contractor address")
 	}
@@ -252,7 +251,6 @@ func CreateContract(
 	if !funder.IsValid() {
 		panic("invalid funder address")
 	}
-	*/
 
 	caller := std.PrevRealm().Addr()
 	if expiryDurationSeconds == 0 {
@@ -471,11 +469,9 @@ func SubmitFunder(contractId uint64) {
 
 // Accept candidate as a contractor
 func AcceptContractor(contractId uint64, contractor std.Address) {
-	/* FIXME: upgrade gno
 	if !contractor.IsValid() {
 		panic("invalid contractor address")
 	}
-	*/
 
 	caller := std.PrevRealm().Addr()
 	if int(contractId) >= len(contracts) {
@@ -564,7 +560,7 @@ func CompleteMilestoneAndPay(contractId uint64, milestoneId uint64) {
 		banker := std.GetBanker(std.BankerTypeRealmSend)
 		banker.SendCoins(
 			std.CurrentRealm().Addr(),
-			std.Address(contract.contractor),
+			contract.contractor,
 			std.Coins{std.Coin{contract.paymentDenom, int64(unpaid)}})
 		contracts[contractId].milestones[milestoneId].paid += unpaid
 	}
@@ -708,7 +704,7 @@ func ResolveConflict(contractId uint64, outcome ConflictOutcome, resolutionMessa
 		banker := std.GetBanker(std.BankerTypeRealmSend)
 		banker.SendCoins(
 			std.CurrentRealm().Addr(),
-			std.Address(contract.funder),
+			contract.funder,
 			std.Coins{std.Coin{contract.paymentDenom, contract.budget - totalPaid}})
 			contracts[contractId].status = ABORTED_IN_FAVOR_OF_FUNDER
 	case PAY_CONTRACTOR:
@@ -719,7 +715,7 @@ func ResolveConflict(contractId uint64, outcome ConflictOutcome, resolutionMessa
 		banker := std.GetBanker(std.BankerTypeRealmSend)
 		banker.SendCoins(
 			std.CurrentRealm().Addr(),
-			std.Address(contract.contractor),
+			contract.contractor,
 			std.Coins{std.Coin{contract.paymentDenom, contract.budget - totalPaid}})
 		contracts[contractId].status = ABORTED_IN_FAVOR_OF_CONTRACTOR
 	default:
