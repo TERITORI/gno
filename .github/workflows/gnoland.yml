@@ -37,7 +37,6 @@ jobs:
           - gnokey
           - gnoweb
           - gnofaucet
-          - gnotxsync
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -60,7 +59,7 @@ jobs:
           - _test.gnoland
           - _test.gnokey
           - _test.pkgs
-          #- _test.gnoweb # this test should be rewritten to run an inmemory localnode
+          - _test.gnoweb
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -68,19 +67,45 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.goversion }}
+      - name: Set environment variables for debug mode
+        if: ${{ runner.debug == 1 }}
+        run: |
+          export LOG_PATH_DIR=${{ runner.temp }}/logs-go${{ matrix.goversion }}-${{ matrix.args }}
+          mkdir -p $LOG_PATH_DIR
+
+          echo "LOG_LEVEL=debug" >> $GITHUB_ENV
+          echo "LOG_PATH_DIR=$LOG_PATH_DIR" >> $GITHUB_ENV
       - name: test
         working-directory: gno.land
         run: |
           export GOPATH=$HOME/go
           export GOTEST_FLAGS="-v -p 1 -timeout=30m -coverprofile=coverage.out -covermode=atomic"
           make ${{ matrix.args }}
-      - if: ${{ runner.os == 'Linux' && matrix.goversion == '1.21.x' }}
+      - uses: actions/upload-artifact@v3
+        if: ${{ runner.os == 'Linux' && matrix.goversion == '1.21.x' }}
+        with:
+          name: ${{runner.os}}-coverage-gnoland-${{ matrix.args}}-${{matrix.goversion}}
+          path: ./gno.land/coverage.out
+      - name: Upload Debug Logs
+        uses: actions/upload-artifact@v3
+        if: ${{ always() && runner.debug == 1 }}
+        with:
+          name: logs-test-go${{ matrix.goversion }}-${{ matrix.args }}
+          path: ${{ env.LOG_PATH_DIR }}/**/*
+
+  upload-coverage:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all previous coverage artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: ${{ runner.temp }}/coverage
+      - name: Upload combined coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
+          directory: ${{ runner.temp }}/coverage
           token: ${{ secrets.CODECOV_TOKEN }}
-          name: gno.land
-          flags: gno.land-${{matrix.args}}
-          files: ./gno.land/coverage.out
           fail_ci_if_error: ${{ github.repository == 'gnolang/gno' }}
 
   docker-integration:
