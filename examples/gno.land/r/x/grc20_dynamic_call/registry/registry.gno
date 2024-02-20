@@ -94,7 +94,7 @@ func TransferByInterfaceName(token string, to std.Address, amount uint64) bool {
 	}
 
 	if registered[i].isBank {
-		banker := std.GetBanker(std.BankerTypeOrigSend)
+		banker := std.GetBanker(std.BankerTypeRealmSend)
 
 		coin := std.Coins{{token, int64(amount)}}
 		realmAddr := std.GetOrigPkgAddr()

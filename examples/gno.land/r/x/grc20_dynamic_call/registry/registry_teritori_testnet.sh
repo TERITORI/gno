@@ -15,7 +15,7 @@ gnokey query bank/balances/$TERITORI -remote="51.15.236.215:26657"
 # Send 10 GNOT to realm address
 gnokey maketx send  \
   -send="10000000ugnot" \
-  -to="g1zeqyg0q5e7m7sr3grzhsq7qpmqymx6uqatts0u" \
+  -to="g19ffr0zd3ad8n4tr7rxff6dte8dxxss2sleajc5" \
   -gas-fee="1ugnot" \
   -gas-wanted="5000000" \
   -broadcast="true" \
@@ -31,7 +31,7 @@ gnokey maketx addpkg  \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
   -pkgdir="./examples/gno.land/r/x/grc20_dynamic_call/registry" \
-  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_01" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_02" \
   teritori
 
 gnokey maketx addpkg  \
@@ -52,7 +52,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_01" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_02" \
   -func="RegisterBankToken" \
   -args="ugnot" \
   teritori
@@ -100,7 +100,7 @@ gnokey maketx call \
   -chainid="teritori-1" \
   -pkgpath="gno.land/r/x/grc20_dynamic_call/foo" \
   -func="Transfer" \
-  -args="g1zeqyg0q5e7m7sr3grzhsq7qpmqymx6uqatts0u" \
+  -args="g19ffr0zd3ad8n4tr7rxff6dte8dxxss2sleajc5" \
   -args="5000000" \
   teritori
 
@@ -135,7 +135,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_01" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_02" \
   -func="TransferByInterfaceName" \
   -args="ugnot" \
   -args="$TERITORI" \
@@ -149,7 +149,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_01" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_02" \
   -func="TransferByInterfaceName" \
   -args="foo" \
   -args="$TERITORI" \
@@ -157,11 +157,11 @@ gnokey maketx call \
   teritori
 
 # Query RealmAddr
-gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_01
+gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_02
 RealmAddr()" -remote="51.15.236.215:26657"
 
-gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_01
-BalanceOfByInterfaceName(\"ugnot\",\"g1zeqyg0q5e7m7sr3grzhsq7qpmqymx6uqatts0u\")" -remote="51.15.236.215:26657"
+gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_02
+BalanceOfByInterfaceName(\"ugnot\",\"g19ffr0zd3ad8n4tr7rxff6dte8dxxss2sleajc5\")" -remote="51.15.236.215:26657"
 
-gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_01
-BalanceOfByInterfaceName(\"foo\",\"g1zeqyg0q5e7m7sr3grzhsq7qpmqymx6uqatts0u\")" -remote="51.15.236.215:26657"
+gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_02
+BalanceOfByInterfaceName(\"foo\",\"g19ffr0zd3ad8n4tr7rxff6dte8dxxss2sleajc5\")" -remote="51.15.236.215:26657"
