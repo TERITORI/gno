@@ -131,9 +131,9 @@ func (r Registry) TransferFromByInterfaceName(token string, from, to std.Address
 			panic("only one coin can be sent")
 		}
 
-		// if int64(amount) != coinSent.AmountOf(i.token) {
-		// 	panic("invalid amount sent")
-		// }
+		if int64(amount) != coinSent.AmountOf(r.registered[i].token) {
+			panic("invalid amount sent")
+		}
 
 		if caller.String() != from {
 			panic("only caller should be configured for banker TransferFrom")

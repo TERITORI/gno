@@ -20,7 +20,7 @@ gnokey maketx addpkg  \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
   -pkgdir="./examples/gno.land/r/x/grc20_dynamic_call/registry" \
-  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_07" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_08" \
   teritori
 
 gnokey maketx addpkg  \
@@ -41,7 +41,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_07" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_08" \
   -func="RegisterBankToken" \
   -args="ugnot" \
   teritori
@@ -135,7 +135,7 @@ gnokey maketx call \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
   -send="10000000ugnot" \
-  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_07" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_08" \
   -func="TransferFromByInterfaceName" \
   -args="ugnot" \
   -args="$TERITORI" \
@@ -150,7 +150,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_07" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_08" \
   -func="TransferByInterfaceName" \
   -args="ugnot" \
   -args="$TERITORI" \
@@ -164,7 +164,7 @@ gnokey maketx call \
   -broadcast="true" \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
-  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_07" \
+  -pkgpath="gno.land/r/x/grc20_dynamic_call/registry_08" \
   -func="TransferByInterfaceName" \
   -args="foo" \
   -args="$TERITORI" \
@@ -172,11 +172,11 @@ gnokey maketx call \
   teritori
 
 # Query RealmAddr
-gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_07
+gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_08
 RealmAddr()" -remote="51.15.236.215:26657"
 
-gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_07
+gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_08
 BalanceOfByInterfaceName(\"ugnot\",\"g1nmh4xp6dlyrk3p484rq9p938juzrf6cmjj4n0h\")" -remote="51.15.236.215:26657"
 
-gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_07
+gnokey query "vm/qeval" -data="gno.land/r/x/grc20_dynamic_call/registry_08
 BalanceOfByInterfaceName(\"foo\",\"g1nmh4xp6dlyrk3p484rq9p938juzrf6cmjj4n0h\")" -remote="51.15.236.215:26657"
