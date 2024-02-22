@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	token_registry "gno.land/p/demo/teritori/token_registry_02"
 	fmt "gno.land/p/demo/ufmt"
-	tori20 "gno.land/r/demo/tori20"
 	"gno.land/r/demo/users"
 )
 
@@ -121,6 +121,7 @@ type Contract struct {
 
 // Escrow State
 var contracts []Contract
+var token_reg = token_registry.New(CurrentRealm())
 
 func CurrentRealm() string {
 	return std.CurrentRealm().Addr().String()
@@ -129,7 +130,7 @@ func CurrentRealm() string {
 func CreateContract(
 	contractor string,
 	funder string,
-	escrowToken string, // grc20 token
+	escrowToken string,
 	metadata string,
 	expiryDuration uint64,
 	milestoneTitles string,
@@ -219,7 +220,8 @@ func CreateContract(
 	// If contract creator is funder then he needs to send all the needed fund to contract
 	funded := false
 	if caller.String() == funder {
-		tori20.TransferFrom(
+		token_reg.TransferFromByInterfaceName(
+			contract.escrowToken,
 			users.AddressOrName(caller.String()),
 			users.AddressOrName(std.CurrentRealm().Addr().String()),
 			projectBudget)
@@ -371,7 +373,8 @@ func PayPartialMilestone(contractId uint64, milestoneId uint64, amount uint64) {
 		panic("could not pay more than milestone amount")
 	}
 
-	tori20.Transfer(
+	token_reg.TransferByInterfaceName(
+		contract.escrowToken,
 		users.AddressOrName(contract.contractor),
 		amount)
 	contracts[contractId].milestones[milestoneId].paid += amount
@@ -417,7 +420,8 @@ func SubmitFunder(contractId uint64, fundingMilestoneIds string) {
 		budget += milestone.amount
 	}
 
-	tori20.TransferFrom(
+	token_reg.TransferFromByInterfaceName(
+		contract.escrowToken,
 		users.AddressOrName(caller.String()),
 		users.AddressOrName(std.CurrentRealm().Addr().String()),
 		budget,
@@ -514,7 +518,8 @@ func CompleteMilestoneAndPay(contractId uint64, milestoneId uint64) {
 	// Pay the milestone
 	unpaid := milestone.amount - milestone.paid
 	if unpaid > 0 {
-		tori20.Transfer(
+		token_reg.TransferByInterfaceName(
+			contract.escrowToken,
 			users.AddressOrName(contract.contractor),
 			unpaid)
 		contracts[contractId].milestones[milestoneId].paid += unpaid
@@ -569,7 +574,8 @@ func ChangeMilestoneStatus(contractId uint64, milestoneId int, newStatus Milesto
 		// Pay the milestone
 		unpaid := milestone.amount - milestone.paid
 		if unpaid > 0 {
-			tori20.Transfer(
+			token_reg.TransferByInterfaceName(
+				contract.escrowToken,
 				users.AddressOrName(contract.contractor),
 				unpaid)
 			contracts[contractId].milestones[milestoneId].paid += unpaid
@@ -601,7 +607,8 @@ func FundMilestone(contractId uint64, milestoneId uint64) {
 	if milestone.funded {
 		panic("milestone already funded")
 	}
-	tori20.TransferFrom(
+	token_reg.TransferFromByInterfaceName(
+		contract.escrowToken,
 		users.AddressOrName(caller.String()),
 		users.AddressOrName(std.CurrentRealm().Addr().String()),
 		milestone.amount)
@@ -763,10 +770,12 @@ func CompleteContractByConflictHandler(contractId uint64, milestoneId uint64, co
 
 	funderAmount := unpaidAmount - contractorAmount
 
-	tori20.Transfer(
+	token_reg.TransferByInterfaceName(
+		contract.escrowToken,
 		users.AddressOrName(contract.contractor),
 		contractorAmount)
-	tori20.Transfer(
+	token_reg.TransferByInterfaceName(
+		contract.escrowToken,
 		users.AddressOrName(contract.funder),
 		funderAmount)
 
@@ -908,4 +917,21 @@ func RenderContracts(startAfter uint64, limit uint64, filterByFunder string, fil
 	}
 	rendered += "]"
 	return rendered
+}
+
+func RegisterGRC20Interface(token string, igrc20 GRC20Interface) {
+	token_reg.RegisterGRC20Interface(token, igrc20)
+}
+
+func UnregisterToken(token string) {
+	token_reg.UnregisterToken(token)
+}
+
+func RegisterBankToken(denom string) {
+	token_reg.RegisterBankToken(denom)
+}
+
+func RealmAddr() string {
+	realmAddr := std.GetOrigPkgAddr()
+	return realmAddr.String()
 }
