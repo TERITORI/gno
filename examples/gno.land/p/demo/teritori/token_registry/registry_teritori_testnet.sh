@@ -20,7 +20,7 @@ gnokey maketx addpkg  \
   -remote="51.15.236.215:26657" \
   -chainid="teritori-1" \
   -pkgdir="./examples/gno.land/p/demo/teritori/token_registry" \
-  -pkgpath="gno.land/p/demo/teritori/token_registry_02" \
+  -pkgpath="gno.land/p/demo/teritori/token_registry_3" \
   teritori
 
 # # Register Bank token

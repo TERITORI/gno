@@ -6,9 +6,8 @@ import (
 	"strings"
 	"time"
 
-	token_registry "gno.land/p/demo/teritori/token_registry_02"
+	token_registry "gno.land/p/demo/teritori/token_registry_3"
 	fmt "gno.land/p/demo/ufmt"
-	"gno.land/r/demo/users"
 )
 
 type ContractStatus uint32
@@ -221,9 +220,9 @@ func CreateContract(
 	funded := false
 	if caller.String() == funder {
 		token_reg.TransferFromByInterfaceName(
-			contract.escrowToken,
-			users.AddressOrName(caller.String()),
-			users.AddressOrName(std.CurrentRealm().Addr().String()),
+			escrowToken,
+			caller,
+			std.CurrentRealm().Addr(),
 			projectBudget)
 
 		funded = true
@@ -375,7 +374,7 @@ func PayPartialMilestone(contractId uint64, milestoneId uint64, amount uint64) {
 
 	token_reg.TransferByInterfaceName(
 		contract.escrowToken,
-		users.AddressOrName(contract.contractor),
+		std.Address(contract.contractor),
 		amount)
 	contracts[contractId].milestones[milestoneId].paid += amount
 }
@@ -422,8 +421,8 @@ func SubmitFunder(contractId uint64, fundingMilestoneIds string) {
 
 	token_reg.TransferFromByInterfaceName(
 		contract.escrowToken,
-		users.AddressOrName(caller.String()),
-		users.AddressOrName(std.CurrentRealm().Addr().String()),
+		caller,
+		std.CurrentRealm().Addr(),
 		budget,
 	)
 
@@ -520,7 +519,7 @@ func CompleteMilestoneAndPay(contractId uint64, milestoneId uint64) {
 	if unpaid > 0 {
 		token_reg.TransferByInterfaceName(
 			contract.escrowToken,
-			users.AddressOrName(contract.contractor),
+			std.Address(contract.contractor),
 			unpaid)
 		contracts[contractId].milestones[milestoneId].paid += unpaid
 	}
@@ -576,7 +575,7 @@ func ChangeMilestoneStatus(contractId uint64, milestoneId int, newStatus Milesto
 		if unpaid > 0 {
 			token_reg.TransferByInterfaceName(
 				contract.escrowToken,
-				users.AddressOrName(contract.contractor),
+				std.Address(contract.contractor),
 				unpaid)
 			contracts[contractId].milestones[milestoneId].paid += unpaid
 		}
@@ -609,8 +608,8 @@ func FundMilestone(contractId uint64, milestoneId uint64) {
 	}
 	token_reg.TransferFromByInterfaceName(
 		contract.escrowToken,
-		users.AddressOrName(caller.String()),
-		users.AddressOrName(std.CurrentRealm().Addr().String()),
+		caller,
+		std.CurrentRealm().Addr(),
 		milestone.amount)
 	contracts[contractId].milestones[milestoneId].funded = true
 	contracts[contractId].milestones[milestoneId].status = MS_PROGRESS
@@ -772,11 +771,11 @@ func CompleteContractByConflictHandler(contractId uint64, milestoneId uint64, co
 
 	token_reg.TransferByInterfaceName(
 		contract.escrowToken,
-		users.AddressOrName(contract.contractor),
+		std.Address(contract.contractor),
 		contractorAmount)
 	token_reg.TransferByInterfaceName(
 		contract.escrowToken,
-		users.AddressOrName(contract.funder),
+		std.Address(contract.funder),
 		funderAmount)
 
 	contracts[contractId].milestones[milestoneId].paid += contractorAmount
@@ -872,11 +871,11 @@ func RenderContract(contractId uint64) string {
 	}
 	milestonesText := strings.Join(milestoneEncodes, ",\n")
 
-	contractorCandidates = []string{}
+	contractorCandidates := []string{}
 	for _, candidate := range c.contractorCandidates {
 		contractorCandidates = append(contractorCandidates, "\""+candidate+"\"")
 	}
-	contractorCandidatesText = strings.Join(contractorCandidates, ",")
+	contractorCandidatesText := strings.Join(contractorCandidates, ",")
 
 	return fmt.Sprintf(`{
 		"id": %d,
@@ -919,7 +918,7 @@ func RenderContracts(startAfter uint64, limit uint64, filterByFunder string, fil
 	return rendered
 }
 
-func RegisterGRC20Interface(token string, igrc20 GRC20Interface) {
+func RegisterGRC20Interface(token string, igrc20 token_registry.GRC20Interface) {
 	token_reg.RegisterGRC20Interface(token, igrc20)
 }
 

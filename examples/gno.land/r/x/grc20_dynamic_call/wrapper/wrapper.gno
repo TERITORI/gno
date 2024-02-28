@@ -7,7 +7,8 @@ import (
 	"gno.land/r/x/grc20_dynamic_call/baz"
 	"gno.land/r/x/grc20_dynamic_call/foo"
 
-	registry "gno.land/r/x/grc20_dynamic_call/registry_01"
+	registry "gno.land/p/demo/teritori/token_registry_3"
+	escrow "gno.land/r/demo/escrow_17"
 )
 
 type FooTokenInterface struct{}
@@ -59,7 +60,7 @@ func (BazTokenInterface) BalanceOf() func(owner users.AddressOrName) uint64 {
 var _ registry.GRC20Interface = BazTokenInterface{}
 
 func init() {
-	registry.RegisterGRC20Interface("foo", FooTokenInterface{})
-	registry.RegisterGRC20Interface("bar", BarTokenInterface{})
-	registry.RegisterGRC20Interface("baz", BazTokenInterface{})
+	escrow.RegisterGRC20Interface("foo", FooTokenInterface{})
+	escrow.RegisterGRC20Interface("bar", BarTokenInterface{})
+	escrow.RegisterGRC20Interface("baz", BazTokenInterface{})
 }
