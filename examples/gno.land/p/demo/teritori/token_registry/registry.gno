@@ -1,4 +1,4 @@
-package registry
+package token_registry
 
 import (
 	"std"
@@ -6,9 +6,18 @@ import (
 	"gno.land/r/demo/users"
 )
 
-const APPROVED_UNREGISTER_CALLER = "g1sqt92sa06ugh8nlt98kyghw83qy84paf4csyh6"
+type Registry struct {
+	registered []TokenInfo
+	manager    string
+}
 
-var registered = []TokenInfo{}
+func New(manager string) *Registry {
+	r := Registry{
+		registered: []TokenInfo{},
+		manager:    manager,
+	}
+	return &r
+}
 
 type GRC20Interface interface {
 	Transfer() func(to users.AddressOrName, amount uint64)
@@ -22,8 +31,8 @@ type TokenInfo struct {
 	igrc20 GRC20Interface // only valid when isBank is false
 }
 
-func findToken(token string) (int, bool) {
-	for i, pair := range registered {
+func (r Registry) findToken(token string) (int, bool) {
+	for i, pair := range r.registered {
 		if pair.token == token {
 			return i, true
 		}
@@ -32,68 +41,68 @@ func findToken(token string) (int, bool) {
 	return -1, false
 }
 
-func appendGRC20Interface(pkgPath string, igrc20 GRC20Interface) {
-	registered = append(registered, TokenInfo{isBank: false, token: pkgPath, igrc20: igrc20})
+func (r Registry) appendGRC20Interface(pkgPath string, igrc20 GRC20Interface) {
+	r.registered = append(r.registered, TokenInfo{isBank: false, token: pkgPath, igrc20: igrc20})
 }
 
-func appendBankToken(denom string) {
-	registered = append(registered, TokenInfo{isBank: true, token: denom})
+func (r Registry) appendBankToken(denom string) {
+	r.registered = append(r.registered, TokenInfo{isBank: true, token: denom})
 }
 
-func removeToken(token string) {
-	i, found := findToken(token)
+func (r Registry) removeToken(token string) {
+	i, found := r.findToken(token)
 	if !found {
 		return
 	}
 
-	registered = append(registered[:i], registered[i+1:]...)
+	r.registered = append(r.registered[:i], r.registered[i+1:]...)
 }
 
-func RegisterGRC20Interface(token string, igrc20 GRC20Interface) {
-	_, found := findToken(token)
+func (r Registry) RegisterGRC20Interface(token string, igrc20 GRC20Interface) {
+	_, found := r.findToken(token)
 	if found {
 		panic("GRC20 already registered")
 	}
 
-	appendGRC20Interface(token, igrc20)
+	r.appendGRC20Interface(token, igrc20)
 }
 
-func UnregisterToken(token string) {
+func (r Registry) UnregisterToken(token string) {
 	// do not allow realm to unregister
 	std.AssertOriginCall()
 	caller := std.GetOrigCaller()
 
-	if caller != APPROVED_UNREGISTER_CALLER {
+	if caller != r.manager {
 		panic("unauthorized")
 	}
 
-	_, found := findToken(token)
+	_, found := r.findToken(token)
 	if found {
-		removeToken(token)
+		r.removeToken(token)
 	}
 }
 
-func RegisterBankToken(denom string) {
-	_, found := findToken(denom)
+func (r Registry) RegisterBankToken(denom string) {
+	_, found := r.findToken(denom)
 	if found {
 		panic("Token already registered")
 	}
 
-	appendBankToken(denom)
+	r.appendBankToken(denom)
 }
 
-func RealmAddr() string {
+func (r Registry) RealmAddr() string {
 	realmAddr := std.GetOrigPkgAddr()
 	return realmAddr.String()
 }
 
-func TransferByInterfaceName(token string, to std.Address, amount uint64) bool {
-	i, found := findToken(token)
+func (r Registry) TransferByInterfaceName(token string, to std.Address, amount uint64) bool {
+	i, found := r.findToken(token)
 	if !found {
 		return false
 	}
 
-	if registered[i].isBank {
+	if r.registered[i].isBank {
 		banker := std.GetBanker(std.BankerTypeRealmSend)
 
 		coin := std.Coins{{token, int64(amount)}}
@@ -103,18 +112,18 @@ func TransferByInterfaceName(token string, to std.Address, amount uint64) bool {
 		banker.SendCoins(realmAddr, to, coin)
 		return true
 	}
-	registered[i].igrc20.Transfer()(users.AddressOrName(to), amount)
+	r.registered[i].igrc20.Transfer()(users.AddressOrName(to), amount)
 
 	return true
 }
 
-func TransferFromByInterfaceName(token string, from, to std.Address, amount uint64) bool {
-	i, found := findToken(token)
+func (r Registry) TransferFromByInterfaceName(token string, from, to std.Address, amount uint64) bool {
+	i, found := r.findToken(token)
 	if !found {
 		return false
 	}
 
-	if registered[i].isBank {
+	if r.registered[i].isBank {
 		coinSent := std.GetOrigSend() // get Coins sent with call
 		caller := std.GetOrigCaller() // get tx sender
 
@@ -122,7 +131,7 @@ func TransferFromByInterfaceName(token string, from, to std.Address, amount uint
 			panic("only one coin can be sent")
 		}
 
-		if int64(amount) != coinSent.AmountOf(registered[i].token) {
+		if int64(amount) != coinSent.AmountOf(r.registered[i].token) {
 			panic("invalid amount sent")
 		}
 
@@ -139,18 +148,18 @@ func TransferFromByInterfaceName(token string, from, to std.Address, amount uint
 		}
 		return true
 	}
-	registered[i].igrc20.TransferFrom()(users.AddressOrName(from), users.AddressOrName(to), amount)
+	r.registered[i].igrc20.TransferFrom()(users.AddressOrName(from), users.AddressOrName(to), amount)
 
 	return true
 }
 
-func BalanceOfByInterfaceName(token string, owner std.Address) uint64 {
-	i, found := findToken(token)
+func (r Registry) BalanceOfByInterfaceName(token string, owner std.Address) uint64 {
+	i, found := r.findToken(token)
 	if !found {
 		return 0
 	}
 
-	if registered[i].isBank {
+	if r.registered[i].isBank {
 		banker := std.GetBanker(std.BankerTypeReadonly)
 		coins := banker.GetCoins(owner)
 		for _, coin := range coins {
@@ -160,6 +169,6 @@ func BalanceOfByInterfaceName(token string, owner std.Address) uint64 {
 		}
 		return 0
 	}
-	balance := registered[i].igrc20.BalanceOf()(users.AddressOrName(owner))
+	balance := r.registered[i].igrc20.BalanceOf()(users.AddressOrName(owner))
 	return balance
 }

@@ -6,9 +6,8 @@ import (
 	"strings"
 	"time"
 
+	token_registry "gno.land/p/demo/teritori/token_registry_3"
 	fmt "gno.land/p/demo/ufmt"
-	tori20 "gno.land/r/demo/tori20"
-	"gno.land/r/demo/users"
 )
 
 type ContractStatus uint32
@@ -121,6 +120,7 @@ type Contract struct {
 
 // Escrow State
 var contracts []Contract
+var token_reg = token_registry.New(CurrentRealm())
 
 func CurrentRealm() string {
 	return std.CurrentRealm().Addr().String()
@@ -129,7 +129,7 @@ func CurrentRealm() string {
 func CreateContract(
 	contractor string,
 	funder string,
-	escrowToken string, // grc20 token
+	escrowToken string,
 	metadata string,
 	expiryDuration uint64,
 	milestoneTitles string,
@@ -219,9 +219,10 @@ func CreateContract(
 	// If contract creator is funder then he needs to send all the needed fund to contract
 	funded := false
 	if caller.String() == funder {
-		tori20.TransferFrom(
-			users.AddressOrName(caller.String()),
-			users.AddressOrName(std.CurrentRealm().Addr().String()),
+		token_reg.TransferFromByInterfaceName(
+			escrowToken,
+			caller,
+			std.CurrentRealm().Addr(),
 			projectBudget)
 
 		funded = true
@@ -371,8 +372,9 @@ func PayPartialMilestone(contractId uint64, milestoneId uint64, amount uint64) {
 		panic("could not pay more than milestone amount")
 	}
 
-	tori20.Transfer(
-		users.AddressOrName(contract.contractor),
+	token_reg.TransferByInterfaceName(
+		contract.escrowToken,
+		std.Address(contract.contractor),
 		amount)
 	contracts[contractId].milestones[milestoneId].paid += amount
 }
@@ -417,9 +419,10 @@ func SubmitFunder(contractId uint64, fundingMilestoneIds string) {
 		budget += milestone.amount
 	}
 
-	tori20.TransferFrom(
-		users.AddressOrName(caller.String()),
-		users.AddressOrName(std.CurrentRealm().Addr().String()),
+	token_reg.TransferFromByInterfaceName(
+		contract.escrowToken,
+		caller,
+		std.CurrentRealm().Addr(),
 		budget,
 	)
 
@@ -514,8 +517,9 @@ func CompleteMilestoneAndPay(contractId uint64, milestoneId uint64) {
 	// Pay the milestone
 	unpaid := milestone.amount - milestone.paid
 	if unpaid > 0 {
-		tori20.Transfer(
-			users.AddressOrName(contract.contractor),
+		token_reg.TransferByInterfaceName(
+			contract.escrowToken,
+			std.Address(contract.contractor),
 			unpaid)
 		contracts[contractId].milestones[milestoneId].paid += unpaid
 	}
@@ -569,8 +573,9 @@ func ChangeMilestoneStatus(contractId uint64, milestoneId int, newStatus Milesto
 		// Pay the milestone
 		unpaid := milestone.amount - milestone.paid
 		if unpaid > 0 {
-			tori20.Transfer(
-				users.AddressOrName(contract.contractor),
+			token_reg.TransferByInterfaceName(
+				contract.escrowToken,
+				std.Address(contract.contractor),
 				unpaid)
 			contracts[contractId].milestones[milestoneId].paid += unpaid
 		}
@@ -601,9 +606,10 @@ func FundMilestone(contractId uint64, milestoneId uint64) {
 	if milestone.funded {
 		panic("milestone already funded")
 	}
-	tori20.TransferFrom(
-		users.AddressOrName(caller.String()),
-		users.AddressOrName(std.CurrentRealm().Addr().String()),
+	token_reg.TransferFromByInterfaceName(
+		contract.escrowToken,
+		caller,
+		std.CurrentRealm().Addr(),
 		milestone.amount)
 	contracts[contractId].milestones[milestoneId].funded = true
 	contracts[contractId].milestones[milestoneId].status = MS_PROGRESS
@@ -763,11 +769,13 @@ func CompleteContractByConflictHandler(contractId uint64, milestoneId uint64, co
 
 	funderAmount := unpaidAmount - contractorAmount
 
-	tori20.Transfer(
-		users.AddressOrName(contract.contractor),
+	token_reg.TransferByInterfaceName(
+		contract.escrowToken,
+		std.Address(contract.contractor),
 		contractorAmount)
-	tori20.Transfer(
-		users.AddressOrName(contract.funder),
+	token_reg.TransferByInterfaceName(
+		contract.escrowToken,
+		std.Address(contract.funder),
 		funderAmount)
 
 	contracts[contractId].milestones[milestoneId].paid += contractorAmount
@@ -863,11 +871,11 @@ func RenderContract(contractId uint64) string {
 	}
 	milestonesText := strings.Join(milestoneEncodes, ",\n")
 
-	contractorCandidates = []string{}
+	contractorCandidates := []string{}
 	for _, candidate := range c.contractorCandidates {
 		contractorCandidates = append(contractorCandidates, "\""+candidate+"\"")
 	}
-	contractorCandidatesText = strings.Join(contractorCandidates, ",")
+	contractorCandidatesText := strings.Join(contractorCandidates, ",")
 
 	return fmt.Sprintf(`{
 		"id": %d,
@@ -908,4 +916,21 @@ func RenderContracts(startAfter uint64, limit uint64, filterByFunder string, fil
 	}
 	rendered += "]"
 	return rendered
+}
+
+func RegisterGRC20Interface(token string, igrc20 token_registry.GRC20Interface) {
+	token_reg.RegisterGRC20Interface(token, igrc20)
+}
+
+func UnregisterToken(token string) {
+	token_reg.UnregisterToken(token)
+}
+
+func RegisterBankToken(denom string) {
+	token_reg.RegisterBankToken(denom)
+}
+
+func RealmAddr() string {
+	realmAddr := std.GetOrigPkgAddr()
+	return realmAddr.String()
 }

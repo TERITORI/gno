@@ -17,3 +17,9 @@ its experimental nature.
 
 Feel free to explore, experiment, and contribute to the exciting developments
 happening in the `x/` directory. Together, we can shape the future of GnoVM.
+
+# Unit test
+
+```
+gno test examples/gno.land/r/x/grc20_dynamic_call/...
+```
