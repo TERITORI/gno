@@ -8,7 +8,7 @@ import (
 
 	"gno.land/p/demo/avl"
 	fmt "gno.land/p/demo/ufmt"
-	"gno.land/r/demo/teritori/escrow"
+	// "gno.land/r/demo/teritori/escrow"
 	"gno.land/r/demo/teritori/vrf"
 )
 
@@ -713,7 +713,8 @@ func TallyAndExecuteJusticeSolution(proposalId uint64) {
 	// If more than 2/3 votes Yes, let it pass
 	if numYesVotes > 0 && numYesVotes*3 >= uint64(len(proposal.governers))*2 {
 		justiceProposals[proposalId].status = PASSED
-		escrow.CompleteContractByConflictHandler(proposal.contractId, proposal.contractorAmount)
+		// FIXME: Should fix properly, for now hardcoded to 0 to be able to work
+		// escrow.CompleteContractByConflictHandler(proposal.contractId, 0, proposal.contractorAmount)
 	} else {
 		justiceProposals[proposalId].status = REJECTED
 	}
