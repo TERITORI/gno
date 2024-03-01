@@ -7,8 +7,7 @@ import (
 	"gno.land/r/x/grc20_dynamic_call/baz"
 	"gno.land/r/x/grc20_dynamic_call/foo"
 
-	registry "gno.land/p/demo/teritori/token_registry_3"
-	escrow "gno.land/r/demo/escrow_17"
+	escrow "gno.land/r/demo/escrow_21"
 )
 
 type FooTokenInterface struct{}
@@ -25,7 +24,7 @@ func (FooTokenInterface) BalanceOf() func(owner users.AddressOrName) uint64 {
 	return foo.BalanceOf
 }
 
-var _ registry.GRC20Interface = FooTokenInterface{}
+var _ escrow.GRC20Interface = FooTokenInterface{}
 
 type BarTokenInterface struct{}
 
@@ -41,7 +40,7 @@ func (BarTokenInterface) BalanceOf() func(owner users.AddressOrName) uint64 {
 	return bar.BalanceOf
 }
 
-var _ registry.GRC20Interface = BarTokenInterface{}
+var _ escrow.GRC20Interface = BarTokenInterface{}
 
 type BazTokenInterface struct{}
 
@@ -57,7 +56,7 @@ func (BazTokenInterface) BalanceOf() func(owner users.AddressOrName) uint64 {
 	return baz.BalanceOf
 }
 
-var _ registry.GRC20Interface = BazTokenInterface{}
+var _ escrow.GRC20Interface = BazTokenInterface{}
 
 func init() {
 	escrow.RegisterGRC20Interface("foo", FooTokenInterface{})

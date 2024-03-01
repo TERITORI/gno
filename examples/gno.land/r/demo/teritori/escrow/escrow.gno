@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	token_registry "gno.land/p/demo/teritori/token_registry_3"
 	fmt "gno.land/p/demo/ufmt"
 )
 
@@ -120,7 +119,7 @@ type Contract struct {
 
 // Escrow State
 var contracts []Contract
-var token_reg = token_registry.New(CurrentRealm())
+var token_reg = NewTokenRegistry(CurrentRealm())
 
 func CurrentRealm() string {
 	return std.CurrentRealm().Addr().String()
@@ -219,11 +218,13 @@ func CreateContract(
 	// If contract creator is funder then he needs to send all the needed fund to contract
 	funded := false
 	if caller.String() == funder {
-		token_reg.TransferFromByInterfaceName(
+		if !token_reg.TransferFromByInterfaceName(
 			escrowToken,
 			caller,
 			std.CurrentRealm().Addr(),
-			projectBudget)
+			projectBudget) {
+			panic("token transfer failure")
+		}
 
 		funded = true
 	}
@@ -372,10 +373,12 @@ func PayPartialMilestone(contractId uint64, milestoneId uint64, amount uint64) {
 		panic("could not pay more than milestone amount")
 	}
 
-	token_reg.TransferByInterfaceName(
+	if !token_reg.TransferByInterfaceName(
 		contract.escrowToken,
 		std.Address(contract.contractor),
-		amount)
+		amount) {
+		panic("token transfer failure")
+	}
 	contracts[contractId].milestones[milestoneId].paid += amount
 }
 
@@ -419,12 +422,14 @@ func SubmitFunder(contractId uint64, fundingMilestoneIds string) {
 		budget += milestone.amount
 	}
 
-	token_reg.TransferFromByInterfaceName(
+	if !token_reg.TransferFromByInterfaceName(
 		contract.escrowToken,
 		caller,
 		std.CurrentRealm().Addr(),
 		budget,
-	)
+	) {
+		panic("token transfer failure")
+	}
 
 	contracts[contractId].funded = true
 	contracts[contractId].status = ACCEPTED
@@ -517,10 +522,12 @@ func CompleteMilestoneAndPay(contractId uint64, milestoneId uint64) {
 	// Pay the milestone
 	unpaid := milestone.amount - milestone.paid
 	if unpaid > 0 {
-		token_reg.TransferByInterfaceName(
+		if !token_reg.TransferByInterfaceName(
 			contract.escrowToken,
 			std.Address(contract.contractor),
-			unpaid)
+			unpaid) {
+			panic("token transfer failure")
+		}
 		contracts[contractId].milestones[milestoneId].paid += unpaid
 	}
 
@@ -573,10 +580,12 @@ func ChangeMilestoneStatus(contractId uint64, milestoneId int, newStatus Milesto
 		// Pay the milestone
 		unpaid := milestone.amount - milestone.paid
 		if unpaid > 0 {
-			token_reg.TransferByInterfaceName(
+			if !token_reg.TransferByInterfaceName(
 				contract.escrowToken,
 				std.Address(contract.contractor),
-				unpaid)
+				unpaid) {
+				panic("token transfer failure")
+			}
 			contracts[contractId].milestones[milestoneId].paid += unpaid
 		}
 	}
@@ -606,11 +615,13 @@ func FundMilestone(contractId uint64, milestoneId uint64) {
 	if milestone.funded {
 		panic("milestone already funded")
 	}
-	token_reg.TransferFromByInterfaceName(
+	if !token_reg.TransferFromByInterfaceName(
 		contract.escrowToken,
 		caller,
 		std.CurrentRealm().Addr(),
-		milestone.amount)
+		milestone.amount) {
+		panic("token transfer failure")
+	}
 	contracts[contractId].milestones[milestoneId].funded = true
 	contracts[contractId].milestones[milestoneId].status = MS_PROGRESS
 }
@@ -769,14 +780,18 @@ func CompleteContractByConflictHandler(contractId uint64, milestoneId uint64, co
 
 	funderAmount := unpaidAmount - contractorAmount
 
-	token_reg.TransferByInterfaceName(
+	if !token_reg.TransferByInterfaceName(
 		contract.escrowToken,
 		std.Address(contract.contractor),
-		contractorAmount)
-	token_reg.TransferByInterfaceName(
+		contractorAmount) {
+		panic("token transfer failure")
+	}
+	if !token_reg.TransferByInterfaceName(
 		contract.escrowToken,
 		std.Address(contract.funder),
-		funderAmount)
+		funderAmount) {
+		panic("token transfer failure")
+	}
 
 	contracts[contractId].milestones[milestoneId].paid += contractorAmount
 	contracts[contractId].milestones[milestoneId].status = MS_COMPLETED
@@ -918,7 +933,7 @@ func RenderContracts(startAfter uint64, limit uint64, filterByFunder string, fil
 	return rendered
 }
 
-func RegisterGRC20Interface(token string, igrc20 token_registry.GRC20Interface) {
+func RegisterGRC20Interface(token string, igrc20 GRC20Interface) {
 	token_reg.RegisterGRC20Interface(token, igrc20)
 }
 
@@ -933,4 +948,28 @@ func RegisterBankToken(denom string) {
 func RealmAddr() string {
 	realmAddr := std.GetOrigPkgAddr()
 	return realmAddr.String()
+}
+
+func RegisteredTokens() string {
+	tokens := token_reg.RegisteredTokens()
+	rendered := "["
+	for index, token := range tokens {
+		// If render === "[", it means we are first item => do not add separator
+		if rendered != "[" {
+			rendered += ","
+		}
+
+		rendered += "\""
+		rendered += token.token
+		if token.isBank {
+			rendered += "(Bank)"
+		}
+		rendered += "\""
+	}
+	rendered += "]"
+	return rendered
+}
+
+func BalanceOfByInterfaceName(token string, owner std.Address) uint64 {
+	return token_reg.BalanceOfByInterfaceName(token, owner)
 }

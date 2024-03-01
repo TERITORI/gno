@@ -1,4 +1,4 @@
-package token_registry
+package escrow
 
 import (
 	"std"
@@ -11,7 +11,7 @@ type Registry struct {
 	manager    string
 }
 
-func New(manager string) *Registry {
+func NewTokenRegistry(manager string) *Registry {
 	r := Registry{
 		registered: []TokenInfo{},
 		manager:    manager,
