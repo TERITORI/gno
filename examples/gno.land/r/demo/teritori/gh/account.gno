@@ -1,6 +1,11 @@
 package gh
 
-import "errors"
+ 
+import (
+	"std"
+	"errors"
+	"gno.land/p/demo/avl"
+)
 
 // Account represents a GitHub user account or organization.
 type Account struct {
@@ -27,7 +32,7 @@ func (a Account) Validate() error {
 	if a.login == "" {
 		return errors.New("empty login")
 	}
-	if a.kind == "" {
+	if a.kind == ""  || (a.kind != UserAccount && a.kind != OrgAccount){
 		return errors.New("empty kind")
 	}
 	if a.name == "" {
