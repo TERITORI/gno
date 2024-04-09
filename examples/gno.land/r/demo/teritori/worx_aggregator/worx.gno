@@ -2,13 +2,9 @@ package worx_aggregator
 
 import(
 	"gno.land/p/demo/avl"
+    "gno.land/r/demo/teritori/registry"
+    "std"
 )
-
-//interface WorxDataProvider {
-//    Get(dataName string, addr std.Address) any
-//    SupportedTypes() []string
-//}
-
 var admin std.Address
 var dataProviders []WorxDataProvider
 var dataTypeToDataProvider avl.Tree
@@ -20,18 +16,22 @@ func Get(dataType string, addr std.Address) []any {
     if len(dataProviders) == 0 {
         panic("there is not dataprovider configured for that datatype")
     }
-    for d := range dataProviders {
-        all = append(all, d.Get(dataType, addr)...)
+    for registerID := range dataProviders {
+        all = append(all, getFromRealm(registerID,dataType, addr)...)
     }
     return all
 }
 
 
-func RegisterDataProvider(dp WorxDataProvider) {
+func RegisterDataProvider(registerRootID string) {
     assertAdmin()
-	for supp := range dp.SupportedTypes() {
+    supportedTypes := registry.Exec(registerRootID, "supportedTypes")
+
+    supportedTypesSlice := supportedTypes.[[]interface{}]
+	for supp := range supportedTypesSlice {
+        suppStr:= supp.(string)
         providers := dataTypeToDataProvider.Get(supp)
-        providers = append(providers, dp)
+        providers = append(providers, registerRootID)
         dataTypeToDataProvider.set(supp, providers)
     }
 }
@@ -40,4 +40,9 @@ func assertAdmin(){
 	if (std.PrevRealm().Addr() != admin) {
         panic("unathorized")
     }
+}
+
+func getFromRealm(registerRootID string,dataType string, address std.Address) []any {
+    getRegisterID := registerRootID 
+    return registry.Exec(getRegisterID, "get", dataType, address)
 }
