@@ -2,38 +2,49 @@ package worx_aggregator
 
 import(
 	"gno.land/p/demo/avl"
+    "gno.land/p/demo/teritori/worx"
+    "std"
 )
-
-//interface WorxDataProvider {
-//    Get(dataName string, addr std.Address) any
-//    SupportedTypes() []string
-//}
-
 var admin std.Address
-var dataProviders []WorxDataProvider
-var dataTypeToDataProvider avl.Tree
+var registeredProviders avl.Tree
+var worxByAddress avl.Tree
 
+func Push(hours int, metadata string, addr std.Address, points int, timestamp int64) {
+    prevRealm := std.PrevRealm().Addr()
+    dataProviders, ok := registeredProviders.Get(string(prevRealm))
+    if !ok {
+        panic("caller realm is not registered as provider")
+    }
+    keeper := getKeeper(addr)
+    keeper.Store(worx.NewWorx(hours, metadata, addr, points, timestamp))
+    worxByAddress.Set(string(addr), keeper)
 
-func Get(dataType string, addr std.Address) []any {
-    all := []any{}
-    dataProviders :=  dataTypeToDataProvider.Get(dataType)
-    if len(dataProviders) == 0 {
-        panic("there is not dataprovider configured for that datatype")
+    std.Emit("worx_added", 
+        "addr",string(addr),
+        "metadata", metadata,
+    )
+}
+
+func getKeeper(addr std.Address) *worx.WorxKeeper{
+    data, ok := worxByAddress.Get(string(addr))
+    if ok {
+        return data.(*worx.WorxKeeper)
     }
-    for d := range dataProviders {
-        all = append(all, d.Get(dataType, addr)...)
-    }
-    return all
+    return &worx.WorxKeeper{}
+}
+
+func Get(dataType string, addr std.Address) []*worx.Worx {
+    return getKeeper(addr).Get()
 }
 
 
-func RegisterDataProvider(dp WorxDataProvider) {
+func RegisterDataProvider(addr std.Address) {
     assertAdmin()
-	for supp := range dp.SupportedTypes() {
-        providers := dataTypeToDataProvider.Get(supp)
-        providers = append(providers, dp)
-        dataTypeToDataProvider.set(supp, providers)
+    _, ok :=registeredProviders.Get(string(addr))
+    if !ok {
+        panic("Data provider already registered")
     }
+    registeredProviders.Set(string(addr), 0)
 }
 
 func assertAdmin(){
