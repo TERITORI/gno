@@ -20,5 +20,14 @@ func TestGetProfile(t *testing.T) {
 	if !strings.Contains(result,"name: Gopher"){
 		t.Error("Bad")
 	}
-
 }
+
+func TestRegisterHandler(t *testing.T) {
+	user1 := testutils.TestAddress("user1")
+	std.TestSetOrigCaller(user1)
+	supportedTypes := RegisterHandler("supportedTypes")
+	if len(supportedTypes) != 1{
+		t.Error("Supported types is wrong")
+	}
+}
+
