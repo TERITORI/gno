@@ -1,54 +1,58 @@
 package worx_aggregator
 
-import(
+import (
+	"std"
+
 	"gno.land/p/demo/avl"
-    "gno.land/p/demo/teritori/worx"
-    "std"
+	"gno.land/p/demo/teritori/worx"
 )
-var admin std.Address
-var registeredProviders avl.Tree
-var worxByAddress avl.Tree
+
+var (
+	admin               std.Address
+	registeredProviders avl.Tree
+	worxByAddress       avl.Tree
+)
 
 func Push(hours int, metadata string, addr std.Address, points int, timestamp int64) {
-    prevRealm := std.PrevRealm().Addr()
-    dataProviders, ok := registeredProviders.Get(string(prevRealm))
-    if !ok {
-        panic("caller realm is not registered as provider")
-    }
-    keeper := getKeeper(addr)
-    keeper.Store(worx.NewWorx(hours, metadata, addr, points, timestamp))
-    worxByAddress.Set(string(addr), keeper)
+	assertRegistered(addr)
 
-    std.Emit("worx_added", 
-        "addr",string(addr),
-        "metadata", metadata,
-    )
+	keeper := getKeeper(addr)
+	keeper.Store(worx.NewWorx(hours, metadata, addr, points, timestamp))
+	worxByAddress.Set(string(addr), keeper)
+
+	std.Emit("worx_added",
+		"addr", string(addr),
+		"metadata", metadata,
+	)
 }
 
-func getKeeper(addr std.Address) *worx.WorxKeeper{
-    data, ok := worxByAddress.Get(string(addr))
-    if ok {
-        return data.(*worx.WorxKeeper)
-    }
-    return &worx.WorxKeeper{}
+func getKeeper(addr std.Address) *worx.WorxKeeper {
+	data, ok := worxByAddress.Get(string(addr))
+	if ok {
+		return data.(*worx.WorxKeeper)
+	}
+	return &worx.WorxKeeper{}
 }
-
-func Get(dataType string, addr std.Address) []*worx.Worx {
-    return getKeeper(addr).Get()
-}
-
 
 func RegisterDataProvider(addr std.Address) {
-    assertAdmin()
-    _, ok :=registeredProviders.Get(string(addr))
-    if !ok {
-        panic("Data provider already registered")
-    }
-    registeredProviders.Set(string(addr), 0)
+	assertAdmin()
+	_, ok := registeredProviders.Get(string(addr))
+	if !ok {
+		panic("Data provider already registered")
+	}
+	registeredProviders.Set(string(addr), 0)
 }
 
-func assertAdmin(){
-	if (std.PrevRealm().Addr() != admin) {
-        panic("unathorized")
-    }
+func assertRegistered(addr std.Address) {
+	prevRealm := std.PrevRealm().Addr()
+	dataProviders, ok := registeredProviders.Get(string(prevRealm))
+	if !ok {
+		panic("caller realm is not registered as provider")
+	}
+}
+
+func assertAdmin() {
+	if std.PrevRealm().Addr() != admin {
+		panic("unathorized")
+	}
 }
