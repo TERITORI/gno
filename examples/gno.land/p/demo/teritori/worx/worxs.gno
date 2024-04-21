@@ -1,5 +1,6 @@
 package worx
-import(
+
+import (
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/ufmt"
 )
@@ -7,13 +8,15 @@ import(
 type WorxKeeper struct {
 	worxs *avl.Tree
 }
+
 const dayToSeconds = 1
 
-func NewWorxKeeper() *WorxKeeper{
+func NewWorxKeeper() *WorxKeeper {
 	return &WorxKeeper{
 		worxs: avl.NewTree(),
 	}
 }
+
 func (keeper *WorxKeeper) Store(worx *Worx) {
 	key := ufmt.Sprintf("%d", worx.Timestamp)
 	worxsInterface, exists := keeper.worxs.Get(key)
@@ -44,7 +47,7 @@ func (keeper *WorxKeeper) GetFromDate(date int64) []*Worx {
 	keeper.worxs.Iterate(start, "", func(key string, value interface{}) bool {
 		// here we account for string comparation "95" > "105" because comparing first character 9 > 1 (Comparation of lenght)
 		// and simply comparing same lenght string 25 > 12 this in order to stop tree for iterating over lower dates leaves
-		if len(start) > len(key) || start > key  { 
+		if len(start) > len(key) || start > key {
 			return true
 		}
 		worxByDay := value.([]*Worx)
