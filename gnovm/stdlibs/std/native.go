@@ -39,7 +39,7 @@ func getTimestamp(m *gno.Machine) int64 {
 // getPrevFunctionNameFromTarget returns the last called function name (identifier) from the call stack.
 func getPrevFunctionNameFromTarget(m *gno.Machine, targetFunc string) string {
 	for i := 0; i < len(m.Frames); i++ {
-		if m.Frames[i].Func.Name == gno.Name(targetFunc) && i > 0 {
+		if m.Frames[i].Func != nil && m.Frames[i].Func.Name == gno.Name(targetFunc) && i > 0 {
 			return string(m.Frames[i-1].Func.Name)
 		}
 	}
