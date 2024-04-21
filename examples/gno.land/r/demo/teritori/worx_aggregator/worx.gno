@@ -8,10 +8,15 @@ import (
 )
 
 var (
-	admin               std.Address
-	registeredProviders avl.Tree
-	worxByAddress       avl.Tree
+	registeredProviders *avl.Tree
+	worxByAddress       *avl.Tree
 )
+
+func init() {
+	registeredProviders = avl.NewTree()
+	worxByAddress = avl.NewTree()
+	setAdminAddress(std.PrevRealm().Addr())
+}
 
 func Push(hours int, metadata string, addr std.Address, points int, timestamp int64) {
 	assertRegistered(addr)
@@ -31,13 +36,13 @@ func getKeeper(addr std.Address) *worx.WorxKeeper {
 	if ok {
 		return data.(*worx.WorxKeeper)
 	}
-	return &worx.WorxKeeper{}
+	return worx.NewWorxKeeper()
 }
 
 func RegisterDataProvider(addr std.Address) {
-	assertAdmin()
+	assertIsAdmin()
 	_, ok := registeredProviders.Get(string(addr))
-	if !ok {
+	if ok {
 		panic("Data provider already registered")
 	}
 	registeredProviders.Set(string(addr), 0)
@@ -48,11 +53,5 @@ func assertRegistered(addr std.Address) {
 	dataProviders, ok := registeredProviders.Get(string(prevRealm))
 	if !ok {
 		panic("caller realm is not registered as provider")
-	}
-}
-
-func assertAdmin() {
-	if std.PrevRealm().Addr() != admin {
-		panic("unathorized")
 	}
 }
