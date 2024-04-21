@@ -3,10 +3,11 @@ package worx
 import (
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/ufmt"
+	"time"
 )
 
 type WorxKeeper struct {
-	worxs []*Worx
+	worxs *avl.Tree
 }
 
 const dayToSeconds = 1
@@ -18,7 +19,16 @@ func NewWorxKeeper() *WorxKeeper {
 }
 
 func (keeper *WorxKeeper) Store(worx *Worx) {
-	keeper.worxs = append(keeper.worxs, worx)
+	storekey := ufmt.Sprintf("%d", time.Now().Unix())
+	worxs, ok:= keeper.worxs.Get(storekey)
+	if ok {
+		worxsOnDay := worxs.([]*Worx)
+		worxsOnDay = append(worxsOnDay, worx)
+		keeper.worxs.Set(storekey, worxsOnDay)
+		return
+	}
+
+	keeper.worxs.Set(storekey, []*Worx{worx})
 }
 
 func (keeper *WorxKeeper) Get() []*Worx {

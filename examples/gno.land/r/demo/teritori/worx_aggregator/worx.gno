@@ -4,17 +4,23 @@ import (
 	"std"
 
 	"gno.land/p/demo/avl"
-	"gno.land/p/demo/teritori/worx"
+	"gno.land/p/teritori/worx"
 )
 
 var (
-	admin               std.Address
-	registeredProviders avl.Tree
-	worxByAddress       avl.Tree
+	registeredProviders *avl.Tree
+	worxByAddress       *avl.Tree
 )
 
+func init() {
+	registeredProviders = avl.NewTree()
+	worxByAddress = avl.NewTree()
+	setAdminAddress(std.PrevRealm().Addr())
+}
+
 func Push(hours int, metadata string, addr std.Address, points int, timestamp int64) {
-	assertRegistered(addr)
+	providerPath := std.PrevRealm().PkgPath()
+	assertRegistered(providerPath)
 
 	keeper := getKeeper(addr)
 	keeper.Store(worx.NewWorx(hours, metadata, addr, points, timestamp))
@@ -31,28 +37,29 @@ func getKeeper(addr std.Address) *worx.WorxKeeper {
 	if ok {
 		return data.(*worx.WorxKeeper)
 	}
-	return &worx.WorxKeeper{}
+	return worx.NewWorxKeeper()
+}
+
+func getDataProviderKeeper(packagePath string) *worx.WorxKeeper {
+	data, ok := registeredProviders.Get(packagePath)
+	if ok {
+		return data.(*worx.WorxKeeper)
+	}
+	return worx.NewWorxKeeper()
 }
 
 func RegisterDataProvider(addr std.Address) {
-	assertAdmin()
+	assertIsAdmin()
 	_, ok := registeredProviders.Get(string(addr))
-	if !ok {
+	if ok {
 		panic("Data provider already registered")
 	}
 	registeredProviders.Set(string(addr), 0)
 }
 
-func assertRegistered(addr std.Address) {
-	prevRealm := std.PrevRealm().Addr()
-	dataProviders, ok := registeredProviders.Get(string(prevRealm))
+func assertRegistered(packagePath string) {
+	_, ok := registeredProviders.Get(packagePath)
 	if !ok {
 		panic("caller realm is not registered as provider")
-	}
-}
-
-func assertAdmin() {
-	if std.PrevRealm().Addr() != admin {
-		panic("unathorized")
 	}
 }
