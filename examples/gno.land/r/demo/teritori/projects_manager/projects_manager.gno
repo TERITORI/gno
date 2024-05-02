@@ -163,24 +163,29 @@ type Conflict struct {
 }
 
 func (c Conflict) ToJSON() *json.Node {
-	responseMessage := json.NullNode("")
+	children := map[string]*json.Node{
+		"initiator":        json.StringNode("", c.initiator.String()),
+		"createdAt":        json.StringNode("", c.createdAt.Format(time.RFC3339)),
+		"initiatorMessage": json.StringNode("", c.initiatorMessage),
+	}
+
 	if c.responseMessage != nil {
-		responseMessage = json.StringNode("", *c.responseMessage)
+		children["responseMessage"] = json.StringNode("", *c.responseMessage)
 	}
-	resolutionMessage := json.NullNode("")
+	if c.respondedAt != nil {
+		children["respondedAt"] = json.StringNode("", c.respondedAt.Format(time.RFC3339))
+	}
+	if c.resolvedAt != nil {
+		children["resolvedAt"] = json.StringNode("", c.resolvedAt.Format(time.RFC3339))
+	}
 	if c.resolutionMessage != nil {
-		resolutionMessage = json.StringNode("", *c.resolutionMessage)
+		children["resolutionMessage"] = json.StringNode("", *c.resolutionMessage)
 	}
-	return json.ObjectNode("", map[string]*json.Node{
-		"initiator":         json.StringNode("", c.initiator.String()),
-		"createdAt":         json.StringNode("", c.createdAt.Format(time.RFC3339)),
-		"respondedAt":       json.StringNode("", c.respondedAt.Format(time.RFC3339)),
-		"resolvedAt":        json.StringNode("", c.resolvedAt.Format(time.RFC3339)),
-		"initiatorMessage":  json.StringNode("", c.initiatorMessage),
-		"responseMessage":   responseMessage,
-		"resolutionMessage": resolutionMessage,
-		"outcome":           c.outcome.ToJSON(),
-	})
+	if c.outcome != nil {
+		children["outcome"] = c.outcome.ToJSON()
+	}
+
+	return json.ObjectNode("", children)
 }
 
 type Contract struct {
@@ -219,6 +224,9 @@ func (c Contract) ToJSON() *json.Node {
 	}
 
 	conflicts := make([]*json.Node, len(c.conflicts))
+	for i, conflict := range c.conflicts {
+		conflicts[i] = conflict.ToJSON()
+	}
 
 	return json.ObjectNode("", map[string]*json.Node{
 		"id":                   json.StringNode("", strconv.FormatUint(c.id, 10)),

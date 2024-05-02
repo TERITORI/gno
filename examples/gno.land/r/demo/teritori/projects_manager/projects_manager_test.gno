@@ -67,8 +67,8 @@ func TestJSONRender(t *testing.T) {
 		t.Fatalf("Error marshalling contract to JSON: %s", err)
 	}
 
-	expected := `{"id":1,"sender":"sender","contractor":"contractor2","contractorCandidates":["contractor1","contractor2"],"funder":"funder","paymentDenom":"denom","metadata":"metadata","status":"CREATED","expireAt":"2021-08-31T00:00:00Z","funderFeedback":"funderFeedback","contractorFeedback":"contractorFeedback","milestones":[{"id":1,"title":"title","desc":"desc","amount":100,"paid":0,"duration":2592000000000000,"link":"link","funded":false,"priority":"MS_PRIORITY_HIGH","status":"MS_OPEN"}],"pausedBy":"pausedBy","conflictHandler":"conflictHandler","handlerCandidate":"handlerCandidate","handlerSuggestor":"handlerSuggestor","createdAt":"2021-08-01T00:00:00Z","budget":1000,"funded":false,"rejectReason":"rejectReason","conflicts":[{"initiator":"initiator","createdAt":"2021-08-01T00:00:00Z","respondedAt":null,"resolvedAt":null,"initiatorMessage":"initiatorMessage","responseMessage":null,"resolutionMessage":null,"outcome":null}]}`
-	if output != expected {
-		t.Errorf("Expected output to be `%s`, got `%s`", expected, output)
+	expected := `{"id":"1","sender":"sender","contractor":"contractor2","contractorCandidates":["contractor1","contractor2"],"funder":"funder","paymentDenom":"denom","metadata":"metadata","status":"CREATED","expireAt":"2021-08-31T00:00:00Z","funderFeedback":"funderFeedback","contractorFeedback":"contractorFeedback","milestones":[{"id":"1","title":"title","desc":"desc","amount":"100","paid":"0","duration":2592000,"link":"link","funded":false,"priority":"MS_PRIORITY_HIGH","status":"MS_OPEN"}],"pausedBy":"pausedBy","conflictHandler":"conflictHandler","handlerCandidate":"handlerCandidate","handlerSuggestor":"handlerSuggestor","createdAt":"2021-08-01T00:00:00Z","budget":"1000","funded":false,"rejectReason":"rejectReason","conflicts":[{"initiator":"initiator","createdAt":"2021-08-01T00:00:00Z","initiatorMessage":"initiatorMessage"}]}`
+	if string(output) != expected {
+		t.Errorf("Expected output to be `%s`, got:\n`%s`", expected, string(output))
 	}
 }
