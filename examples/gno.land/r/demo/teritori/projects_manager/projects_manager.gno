@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gno.land/p/demo/json"
+	"gno.land/p/demo/ufmt"
 )
 
 type ContractStatus uint32
@@ -835,4 +836,24 @@ func RenderContractsJSON(startAfter uint64, limit uint64, filterByFunder string,
 		panic(err)
 	}
 	return string(ret)
+}
+
+func Render(path string) string {
+	b := strings.Builder{}
+	b.WriteString("# Projects Manager\n")
+	b.WriteString("## Overview\n")
+	b.WriteString("This contract is a simple project manager that allows users to create projects and manage them.\n")
+	b.WriteString(ufmt.Sprintf("Contracts managed: %d\n", len(contracts)))
+	b.WriteString("## Latest projects\n")
+	numContracts := 3
+	if len(contracts) < 3 {
+		numContracts = len(contracts)
+	}
+	for i := 0; i < numContracts; i++ {
+		b.WriteString("```json\n")
+		b.WriteString(RenderContractJSON(uint64(len(contracts) - (i + 1))))
+		b.WriteString("\n")
+		b.WriteString("```\n")
+	}
+	return b.String()
 }
