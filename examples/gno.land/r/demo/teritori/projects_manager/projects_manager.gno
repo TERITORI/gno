@@ -130,8 +130,8 @@ type Milestone struct {
 	desc     string
 	amount   int64
 	paid     int64
-	duration time.Duration
-	link     string // milestone reference link
+	duration time.Duration // marshal as seconds
+	link     string        // milestone reference link
 	funded   bool
 	priority MilestonePriority
 	status   MilestoneStatus
