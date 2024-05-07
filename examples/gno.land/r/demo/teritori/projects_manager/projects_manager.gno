@@ -374,7 +374,7 @@ func CreateContract(
 		sent := std.GetOrigSend()
 		amount := sent.AmountOf(paymentDenom)
 		if amount != projectBudget {
-			panic("funder should send all the needed funds at instantiation")
+			panic(ufmt.Sprintf("funder `%s` should send `%d%s`, got `%d%s`", caller, amount, paymentDenom, sent, paymentDenom))
 		}
 		funded = true
 	}
