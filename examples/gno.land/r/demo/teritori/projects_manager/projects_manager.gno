@@ -6,7 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"gno.land/p/demo/avl"
+	"gno.land/p/demo/dao_maker/jsonutil"
 	"gno.land/p/demo/json"
+	"gno.land/p/demo/seqid"
 	"gno.land/p/demo/ufmt"
 )
 
@@ -118,6 +121,18 @@ func (x MilestonePriority) String() string {
 		return "MS_PRIORITY_LOW"
 	}
 	return "UNKNOWN"
+}
+
+func MilestonePriorityFromString(s string) MilestonePriority {
+	switch s {
+	case "MS_PRIORITY_HIGH":
+		return MS_PRIORITY_HIGH
+	case "MS_PRIORITY_MEDIUM":
+		return MS_PRIORITY_MEDIUM
+	case "MS_PRIORITY_LOW":
+		return MS_PRIORITY_LOW
+	}
+	panic("invalid MilestonePriority")
 }
 
 func (x MilestonePriority) ToJSON() *json.Node {
@@ -254,11 +269,63 @@ func (c Contract) ToJSON() *json.Node {
 	})
 }
 
-// Escrow State
-var contracts []Contract
+// State
+var (
+	contracts                      []*Contract
+	contractsByFunder              = avl.NewTree() // std.Address(funder) => contractID => *Contract
+	contractsByContractor          = avl.NewTree() // std.Address(contractor) => contractID => *Contract
+	contractsByFunderAndContractor = avl.NewTree() // std.Address(funder) + std.Address(contractor) => contractID => *Contract
+)
+
+func setIndices(contract *Contract) {
+	if contract == nil {
+		panic("contract is nil")
+	}
+
+	if contract.contractor != "" {
+		contractorKey := std.Address(contract.contractor).String()
+		byIDTree, ok := contractsByContractor.Get(contractorKey)
+		if !ok {
+			byIDTree = avl.NewTree()
+			contractsByContractor.Set(contractorKey, byIDTree)
+		}
+
+		byIDTree.(*avl.Tree).Set(seqid.ID(contract.id).String(), contract)
+	}
+
+	if contract.funder != "" {
+		funderKey := std.Address(contract.funder).String()
+		byIDTree, ok := contractsByFunder.Get(funderKey)
+		if !ok {
+			byIDTree = avl.NewTree()
+			contractsByFunder.Set(funderKey, byIDTree)
+		}
+
+		byIDTree.(*avl.Tree).Set(seqid.ID(contract.id).String(), contract)
+	}
+
+	if contract.contractor != "" && contract.funder != "" {
+		byIDTree, ok := contractsByFunderAndContractor.Get(std.Address(contract.funder).String() + std.Address(contract.contractor).String())
+		if !ok {
+			byIDTree = avl.NewTree()
+			contractsByFunderAndContractor.Set(std.Address(contract.funder).String()+std.Address(contract.contractor).String(), byIDTree)
+		}
+
+		byIDTree.(*avl.Tree).Set(seqid.ID(contract.id).String(), contract)
+	}
+}
 
 func CurrentRealm() string {
 	return std.CurrentRealm().Addr().String()
+}
+
+type MilestoneDefinition struct {
+	Title    string
+	Desc     string
+	Amount   int64
+	Duration time.Duration
+	Link     string
+	Priority MilestonePriority
 }
 
 func CreateContract(
@@ -267,12 +334,7 @@ func CreateContract(
 	paymentDenom string,
 	metadata string,
 	expiryDurationSeconds uint64,
-	milestoneTitles string,
-	milestoneDescs string,
-	milestoneAmounts string,
-	milestoneDurationsSeconds string,
-	milestoneLinks string,
-	milestonePriorities string,
+	milestones []MilestoneDefinition,
 	conflictHandler string,
 ) {
 	if contractor != "" && !contractor.IsValid() {
@@ -300,72 +362,25 @@ func CreateContract(
 		panic("caller should be one of contractor or funder")
 	}
 
-	milestoneTitleArr := strings.Split(milestoneTitles, ",")
-	milestoneDescArr := strings.Split(milestoneDescs, ",")
-	milestoneAmountArr := strings.Split(milestoneAmounts, ",")
-	milestoneDurationArr := strings.Split(milestoneDurationsSeconds, ",")
-	milestoneLinkArr := strings.Split(milestoneLinks, ",")
-	milestonePrioritiesArr := strings.Split(milestonePriorities, ",")
-
-	if len(milestoneTitleArr) == 0 {
-		panic("no milestone titles provided")
+	if len(milestones) == 0 {
+		panic("milestones should not be empty")
 	}
 
-	if len(milestoneTitleArr) != len(milestoneAmountArr) ||
-		len(milestoneTitleArr) != len(milestoneDurationArr) ||
-		len(milestoneTitleArr) != len(milestonePrioritiesArr) ||
-		len(milestoneTitleArr) != len(milestoneDescArr) ||
-		len(milestoneTitleArr) != len(milestoneLinkArr) {
-		panic("mismatch on milestones title, description, amount, duration, priority and link")
-	}
-
-	milestones := []Milestone{}
+	mss := make([]Milestone, 0, len(milestones))
 	projectBudget := int64(0)
-	for i, title := range milestoneTitleArr {
-		amount, err := strconv.Atoi(milestoneAmountArr[i])
-		if err != nil {
-			panic(err)
-		}
-		if amount < 0 {
-			panic("milestone amount should be a positive number")
-		}
-
-		durationSeconds, err := strconv.Atoi(milestoneDurationArr[i])
-		if err != nil {
-			panic(err)
-		}
-		if durationSeconds <= 0 {
-			panic("milestone duration should be greater than 0")
-		}
-
-		var prio MilestonePriority
-
-		switch milestonePrioritiesArr[i] {
-		case "MS_PRIORITY_HIGH":
-			prio = MS_PRIORITY_HIGH
-		case "MS_PRIORITY_MEDIUM":
-			prio = MS_PRIORITY_MEDIUM
-		case "MS_PRIORITY_LOW":
-			prio = MS_PRIORITY_LOW
-		default:
-			panic("priority is not valid")
-		}
-
-		duration := time.Duration(durationSeconds) * time.Second
-
-		milestones = append(milestones, Milestone{
-			id:       uint64(i),
-			title:    title,
-			desc:     milestoneDescArr[i],
-			amount:   int64(amount),
+	for _, ms := range milestones {
+		projectBudget += ms.Amount
+		mss = append(mss, Milestone{
+			id:       uint64(len(mss)),
+			title:    ms.Title,
+			desc:     ms.Desc,
+			amount:   ms.Amount,
 			paid:     0,
-			duration: duration,
-			link:     milestoneLinkArr[i],
-			priority: prio,
-			funded:   false,
+			duration: ms.Duration,
+			link:     ms.Link,
+			priority: ms.Priority,
 			status:   MS_OPEN,
 		})
-		projectBudget += int64(amount)
 	}
 
 	// If contract creator is funder then he needs to send all the needed fund to contract
@@ -374,7 +389,7 @@ func CreateContract(
 		sent := std.GetOrigSend()
 		amount := sent.AmountOf(paymentDenom)
 		if amount != projectBudget {
-			panic(ufmt.Sprintf("funder `%s` should send `%d%s`, got `%d%s`", caller, amount, paymentDenom, sent, paymentDenom))
+			panic(ufmt.Sprintf("funder `%s` should send `%d%s`, got `%d%s`", caller, projectBudget, paymentDenom, amount, paymentDenom))
 		}
 		funded = true
 	}
@@ -383,7 +398,7 @@ func CreateContract(
 	now := time.Now()
 
 	contractId := uint64(len(contracts))
-	contracts = append(contracts, Contract{
+	contracts = append(contracts, &Contract{
 		id:              contractId,
 		sender:          caller,
 		contractor:      contractor,
@@ -392,12 +407,43 @@ func CreateContract(
 		metadata:        metadata,
 		status:          CREATED,
 		expireAt:        now.Add(expiryDuration),
-		milestones:      milestones,
+		milestones:      mss,
 		conflictHandler: conflictHandler,
 		budget:          projectBudget,
 		createdAt:       now,
 		funded:          funded,
 	})
+	setIndices(contracts[contractId])
+}
+
+func CreateContractJSON(
+	contractor std.Address,
+	funder std.Address,
+	paymentDenom string,
+	metadata string,
+	expiryDurationSeconds uint64,
+	milestonesJSON string,
+	conflictHandler string,
+) {
+	ast, err := json.Unmarshal([]byte(milestonesJSON))
+	if err != nil {
+		panic(err)
+	}
+	vals := ast.MustArray()
+	milestones := make([]MilestoneDefinition, 0, len(vals))
+	for _, val := range vals {
+		obj := val.MustObject()
+		milestone := MilestoneDefinition{
+			Title:    obj["title"].MustString(),
+			Desc:     obj["desc"].MustString(),
+			Amount:   jsonutil.MustInt64(obj["amount"]),
+			Duration: jsonutil.MustDurationSeconds(obj["duration"]),
+			Link:     obj["link"].MustString(),
+			Priority: MilestonePriorityFromString(obj["priority"].MustString()),
+		}
+		milestones = append(milestones, milestone)
+	}
+	CreateContract(contractor, funder, paymentDenom, metadata, expiryDurationSeconds, milestones, conflictHandler)
 }
 
 func CancelContract(contractId uint64) {
@@ -776,36 +822,39 @@ func GetContractorCandidatesJSON(contractId uint64) string {
 	return string(ret)
 }
 
-func GetContracts(startAfter, limit uint64, filterByFunder string, filterByContractor string) []Contract {
-	max := uint64(len(contracts))
-	if startAfter+limit < max {
-		max = startAfter + limit
+func GetContracts(offset, limit int, filterByFunder string, filterByContractor string) []*Contract {
+	if offset < 0 {
+		offset = 0
 	}
 
-	var results []Contract
-	i := uint64(0)
-
-	for _, c := range contracts {
-		if filterByFunder != "ALL" && c.funder.String() != filterByFunder {
-			continue
-		}
-
-		if filterByContractor != "ALL" && c.contractor.String() != filterByContractor {
-			continue
-		}
-
-		if i < startAfter {
-			i++
-			continue
-		}
-
-		if i > max {
-			break
-		}
-
-		results = append(results, c)
-		i++
+	if limit <= 0 || offset >= len(contracts) {
+		return nil
 	}
+
+	var tree interface{}
+	if filterByFunder != "" && filterByContractor != "" {
+		tree, _ = contractsByFunderAndContractor.Get(filterByFunder + filterByContractor)
+	} else if filterByFunder != "" {
+		tree, _ = contractsByFunder.Get(filterByFunder)
+	} else if filterByContractor != "" {
+		tree, _ = contractsByContractor.Get(filterByContractor)
+	} else {
+		end := offset + limit
+		if end > len(contracts) {
+			end = len(contracts)
+		}
+		return contracts[offset:end]
+	}
+
+	if tree == nil {
+		return nil
+	}
+
+	var results []*Contract
+	tree.(*avl.Tree).IterateByOffset(offset, limit, func(key string, value interface{}) bool {
+		results = append(results, value.(*Contract))
+		return false
+	})
 
 	return results
 }
@@ -824,8 +873,8 @@ func RenderContractJSON(contractId uint64) string {
 	return string(ret)
 }
 
-func RenderContractsJSON(startAfter uint64, limit uint64, filterByFunder string, filterByContractor string) string {
-	contracts := GetContracts(startAfter, limit, filterByFunder, filterByContractor)
+func RenderContractsJSON(offset, limit int, filterByFunder string, filterByContractor string) string {
+	contracts := GetContracts(offset, limit, filterByFunder, filterByContractor)
 	contractsJSON := make([]*json.Node, len(contracts))
 	for i, c := range contracts {
 		contractsJSON[i] = c.ToJSON()
@@ -852,7 +901,7 @@ func Render(path string) string {
 	for i := 0; i < numContracts; i++ {
 		b.WriteString("```json\n")
 		b.WriteString(RenderContractJSON(uint64(len(contracts) - (i + 1))))
-		b.WriteString("\n")
+		b.WriteRune('\n')
 		b.WriteString("```\n")
 	}
 	return b.String()

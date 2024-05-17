@@ -127,9 +127,5 @@ func AddressOrNameNode(aon users.AddressOrName) *json.Node {
 
 func MustAddressOrName(value *json.Node) users.AddressOrName {
 	aon := users.AddressOrName(value.MustString())
-	if !aon.IsValid() {
-		panic("invalid address or name")
-	}
-
 	return aon
 }
