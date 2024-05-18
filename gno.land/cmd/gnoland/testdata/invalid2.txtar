@@ -1,0 +1,42 @@
+# load the package from $WORK directory
+loadpkg gno.land/r/ptrmap $WORK
+gnoland start
+
+
+gnokey maketx call -pkgpath gno.land/r/ptrmap -func Add -args 5 -gas-fee 1000000ugnot -gas-wanted 2000000 -broadcast -chainid=tendermint_test test1
+stdout OK!
+
+gnokey maketx call -pkgpath gno.land/r/ptrmap -func GetLastValue -gas-fee 1000000ugnot -gas-wanted 2000000 -broadcast -chainid=tendermint_test test1
+stdout '(5 int)'
+stdout OK!
+
+-- realm.gno --
+package ptrmap
+
+type S struct {
+	next *S
+	value int
+}
+var v = &S{
+ value: 0,
+}
+
+func Add(value int) {
+	l := GetLast()
+	l.next = &S{
+		value: value,
+	}
+}
+
+func GetLast() *S {
+	item := v
+	for item.next != nil {
+		item = item.next
+	}
+	return item
+}
+
+func GetLastValue() int {
+	l := GetLast()
+	return l.value
+}

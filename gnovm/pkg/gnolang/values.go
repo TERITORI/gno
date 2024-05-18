@@ -205,6 +205,8 @@ func (pv *PointerValue) GetBase(store Store) Object {
 // TODO: document as something that enables into-native assignment.
 // TODO: maybe consider this as entrypoint for DataByteValue too?
 func (pv PointerValue) Assign2(alloc *Allocator, store Store, rlm *Realm, tv2 TypedValue, cu bool) {
+
+	fmt.Printf("PointerValue.Assign2 init: %v %v\n", pv.TV.T, tv2.T)
 	// Special cases.
 	if pv.Index == PointerIndexNative {
 		// Special case if extended object && native.
@@ -213,6 +215,7 @@ func (pv PointerValue) Assign2(alloc *Allocator, store Store, rlm *Realm, tv2 Ty
 			// assign value to map directly.
 			krv := gno2GoValue(pv.Key, reflect.Value{})
 			vrv := gno2GoValue(&tv2, reflect.Value{})
+			fmt.Println("PointerValue.Assign2: map", krv, vrv)
 			rv.SetMapIndex(krv, vrv)
 		} else {
 			// assign depending on pv.TV type.
@@ -280,6 +283,7 @@ func (pv PointerValue) Assign2(alloc *Allocator, store Store, rlm *Realm, tv2 Ty
 		oo1 := pv.TV.GetFirstObject(store)
 		pv.TV.Assign(alloc, tv2, cu)
 		oo2 := pv.TV.GetFirstObject(store)
+		fmt.Printf("PointerValue.Assign2: %v %v %v %v %v\n", pv.Base.(Object).GetObjectID(), pv.Base.(Object), pv.TV, oo1, oo2)
 		rlm.DidUpdate(pv.Base.(Object), oo1, oo2)
 	} else {
 		pv.TV.Assign(alloc, tv2, cu)

@@ -1,0 +1,35 @@
+# load the package from $WORK directory
+loadpkg gno.land/r/ptrmap $WORK
+gnoland start
+
+
+gnokey maketx call -pkgpath gno.land/r/ptrmap -func Add -gas-fee 1000000ugnot -gas-wanted 2000000 -broadcast -chainid=tendermint_test test1
+stdout OK!
+
+gnokey maketx call -pkgpath gno.land/r/ptrmap -func Test -gas-fee 1000000ugnot -gas-wanted 2000000 -broadcast -chainid=tendermint_test test1
+stdout '(true bool)'
+stdout OK!
+
+-- registry/realm.gno --
+package ptrmap
+
+type S struct {
+	val int
+}
+
+var (
+	li = []*S{}
+	i  = new(S)
+)
+
+func Add() {
+	li = append(li, i)
+}
+
+func Test() bool {
+	return li[0] == i
+}
+
+-- foo/realm.gno --
+
+

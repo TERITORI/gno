@@ -249,7 +249,10 @@ func (ds *defaultStore) SetPackageRealm(rlm *Realm) {
 // all []TypedValue types and TypeValue{} types to be
 // loaded (non-ref) types.
 func (ds *defaultStore) GetObject(oid ObjectID) Object {
+	fmt.Println("GetObject", oid)
+
 	oo := ds.GetObjectSafe(oid)
+	fmt.Println("GetObject return", oo)
 	if oo == nil {
 		panic(fmt.Sprintf("unexpected object with id %s", oid.String()))
 	}

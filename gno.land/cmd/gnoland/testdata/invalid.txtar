@@ -1,0 +1,27 @@
+# load the package from $WORK directory
+loadpkg gno.land/r/ptrmap $WORK
+gnoland start
+
+
+gnokey maketx call -pkgpath gno.land/r/ptrmap -func AddToMap -args 5 -gas-fee 1000000ugnot -gas-wanted 2000000 -broadcast -chainid=tendermint_test test1
+stdout OK!
+
+gnokey maketx call -pkgpath gno.land/r/ptrmap -func GetFromMap -gas-fee 1000000ugnot -gas-wanted 2000000 -broadcast -chainid=tendermint_test test1
+stdout '(5 int)'
+stdout OK!
+
+-- realm.gno --
+package ptrmap
+
+var (
+	m = map[*int]int{}
+	i = new(int)
+)
+
+func AddToMap(value int) {
+	m[i] = value
+}
+
+func GetFromMap() int {
+	return m[i]
+}

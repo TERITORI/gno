@@ -1,0 +1,14 @@
+# Lint 
+
+gno run -expr main() ./main.gno
+
+
+-- main.gno --
+package main
+
+import "time"
+
+func main() {
+	var a int64 = 2
+	println(time.Second * a)
+}
