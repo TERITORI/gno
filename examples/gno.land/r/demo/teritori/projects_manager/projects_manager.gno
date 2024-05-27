@@ -275,6 +275,7 @@ var (
 	contractsByFunder              = avl.NewTree() // std.Address(funder) => contractID => *Contract
 	contractsByContractor          = avl.NewTree() // std.Address(contractor) => contractID => *Contract
 	contractsByFunderAndContractor = avl.NewTree() // std.Address(funder) + std.Address(contractor) => contractID => *Contract
+	contractsWithCandidates        = avl.NewTree() // std.Address(funder) => contractID => *Contract
 )
 
 func setIndices(contract *Contract) {
@@ -578,6 +579,18 @@ func AcceptContractor(contractId uint64, contractor std.Address) {
 	}
 
 	contracts[contractId].contractor = contractor
+
+	funderKey := contract.funder.String()
+	byIDTreeIface, ok := contractsWithCandidates.Get(funderKey)
+	if !ok {
+		byIDTreeIface = avl.NewTree()
+		contractsWithCandidates.Set(funderKey, byIDTreeIface)
+	}
+	byIDTree := byIDTreeIface.(*avl.Tree)
+	byIDTree.Remove(seqid.ID(contract.id).String())
+	if byIDTree.Size() == 0 {
+		contractsWithCandidates.Remove(funderKey)
+	}
 }
 
 func SubmitContractorCandidate(contractId uint64) {
@@ -608,6 +621,14 @@ func SubmitContractorCandidate(contractId uint64) {
 	}
 
 	contracts[contractId].contractorCandidates = append(candidates, caller)
+
+	funderKey := contract.funder.String()
+	byIDTree, ok := contractsWithCandidates.Get(funderKey)
+	if !ok {
+		byIDTree = avl.NewTree()
+		contractsWithCandidates.Set(funderKey, byIDTree)
+	}
+	byIDTree.(*avl.Tree).Set(seqid.ID(contract.id).String(), contract)
 }
 
 // Complete any milestone in review status and pay the needed amount
@@ -822,7 +843,7 @@ func GetContractorCandidatesJSON(contractId uint64) string {
 	return string(ret)
 }
 
-func GetContracts(offset, limit int, filterByFunder string, filterByContractor string) []*Contract {
+func GetContracts(offset, limit int, filter Filter) []*Contract {
 	if offset < 0 {
 		offset = 0
 	}
@@ -831,19 +852,26 @@ func GetContracts(offset, limit int, filterByFunder string, filterByContractor s
 		return nil
 	}
 
-	var tree interface{}
-	if filterByFunder != "" && filterByContractor != "" {
-		tree, _ = contractsByFunderAndContractor.Get(filterByFunder + filterByContractor)
-	} else if filterByFunder != "" {
-		tree, _ = contractsByFunder.Get(filterByFunder)
-	} else if filterByContractor != "" {
-		tree, _ = contractsByContractor.Get(filterByContractor)
-	} else {
+	if filter == nil {
 		end := offset + limit
 		if end > len(contracts) {
 			end = len(contracts)
 		}
 		return contracts[offset:end]
+	}
+
+	var tree interface{}
+	switch f := filter.(type) {
+	case *FilterByCandidatesForFunder:
+		tree, _ = contractsWithCandidates.Get(f.Funder.String())
+	case *FilterByContractorAndFunder:
+		tree, _ = contractsByFunderAndContractor.Get(f.Funder.String() + f.Contractor.String())
+	case *FilterByContractor:
+		tree, _ = contractsByContractor.Get(f.Contractor.String())
+	case *FilterByFunder:
+		tree, _ = contractsByFunder.Get(f.Funder.String())
+	default:
+		panic("unknown filter")
 	}
 
 	if tree == nil {
@@ -873,10 +901,15 @@ func RenderContractJSON(contractId uint64) string {
 	return string(ret)
 }
 
-func RenderContractsJSON(offset, limit int, filterByFunder string, filterByContractor string) string {
-	contracts := GetContracts(offset, limit, filterByFunder, filterByContractor)
-	contractsJSON := make([]*json.Node, len(contracts))
-	for i, c := range contracts {
+func RenderContractsJSON(offset, limit int, filterJSON string) string {
+	filter := FilterFromJSON(json.Must(json.Unmarshal([]byte(filterJSON))))
+	contractsRes := GetContracts(offset, limit, filter)
+	return renderContractsJSON(contractsRes)
+}
+
+func renderContractsJSON(contractsRes []*Contract) string {
+	contractsJSON := make([]*json.Node, len(contractsRes))
+	for i, c := range contractsRes {
 		contractsJSON[i] = c.ToJSON()
 	}
 
