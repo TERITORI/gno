@@ -64,7 +64,7 @@ var defaultDevOptions = &devCfg{
 	chainId:             "dev",
 	maxGas:              10_000_000_000,
 	webListenerAddr:     "127.0.0.1:8888",
-	nodeRPCListenerAddr: "127.0.0.1:36657",
+	nodeRPCListenerAddr: "127.0.0.1:26657",
 	deployKey:           DefaultDeployerAddress.String(),
 	home:                gnoenv.HomeDir(),
 	root:                gnoenv.RootDir(),
@@ -255,6 +255,13 @@ func execDev(cfg *devCfg, args []string, io commands.IO) (err error) {
 
 	// Setup gnoweb
 	webhandler := setupGnoWebServer(logger.WithGroup(WebLogName), cfg, devNode)
+
+	mux.HandleFunc("/reset", func(res http.ResponseWriter, req *http.Request) {
+		if err := devNode.Reset(req.Context()); err != nil {
+			logger.Error("failed to reset", slog.Any("err", err))
+			res.WriteHeader(http.StatusInternalServerError)
+		}
+	})
 
 	// Setup HotReload if needed
 	if !cfg.noWatch {

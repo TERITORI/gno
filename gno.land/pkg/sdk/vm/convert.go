@@ -184,7 +184,7 @@ func convertArgToGno(arg string, argT gno.Type) (tv gno.TypedValue) {
 			}
 			return
 		} else {
-			panic("unexpected slice type in contract arg")
+			panic(fmt.Sprintf("unexpected slice type in contract arg %q", arg))
 		}
 	default:
 		panic(fmt.Sprintf("unexpected type in contract arg: %v", argT))
