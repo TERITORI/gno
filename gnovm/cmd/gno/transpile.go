@@ -25,6 +25,7 @@ import (
 type transpileCfg struct {
 	verbose     bool
 	rootDir     string
+	extraDirs   string
 	skipImports bool
 	gobuild     bool
 	goBinary    string
@@ -92,6 +93,13 @@ func (c *transpileCfg) RegisterFlags(fs *flag.FlagSet) {
 		"root-dir",
 		"",
 		"clone location of github.com/gnolang/gno (gno tries to guess it)",
+	)
+
+	fs.StringVar(
+		&c.extraDirs,
+		"extra-dirs",
+		"",
+		"extra directories to look for packages in",
 	)
 
 	fs.BoolVar(
@@ -251,7 +259,7 @@ func transpileFile(srcPath string, opts *transpileOptions) error {
 	targetFilename, tags := transpiler.TranspiledFilenameAndTags(srcPath)
 
 	// preprocess.
-	transpileRes, err := transpiler.Transpile(string(source), tags, srcPath)
+	transpileRes, err := transpiler.Transpile(string(source), tags, srcPath, strings.Split(opts.cfg.extraDirs, ","))
 	if err != nil {
 		return fmt.Errorf("transpile: %w", err)
 	}
