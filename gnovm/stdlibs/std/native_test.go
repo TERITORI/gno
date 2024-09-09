@@ -208,12 +208,18 @@ func TestVerify(t *testing.T) {
 	maliciousMessage := "Malicious Message"
 	signature, _, err := kb.Sign("user", pass, []byte(goodMessage))
 	assert.NoError(t, err)
+	signatureValid, signer := X_verifySignature(publicKey, goodMessage, string(signature))
 
-	if !X_verifySignature(publicKey, goodMessage, string(signature)) {
+	if !signatureValid {
 		t.Error("verify failed")
 	}
 
-	if X_verifySignature(publicKey, maliciousMessage, string(signature)) {
+	if signer != info.GetAddress().String() {
+		t.Error("signer is not equal to address")
+	}
+
+	signatureValid, _ = X_verifySignature(publicKey, maliciousMessage, string(signature))
+	if signatureValid {
 		t.Error("verify worked on malicious message")
 	}
 }

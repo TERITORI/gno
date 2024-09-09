@@ -731,6 +731,7 @@ var nativeFuncs = [...]NativeFunc{
 		},
 		[]gno.FieldTypeExpr{
 			{Name: gno.N("r0"), Type: gno.X("bool")},
+			{Name: gno.N("r1"), Type: gno.X("string")},
 		},
 		false,
 		func(m *gno.Machine) {
@@ -748,12 +749,17 @@ var nativeFuncs = [...]NativeFunc{
 			gno.Gno2GoValue(b.GetPointerTo(nil, gno.NewValuePathBlock(1, 1, "")).TV, rp1)
 			gno.Gno2GoValue(b.GetPointerTo(nil, gno.NewValuePathBlock(1, 2, "")).TV, rp2)
 
-			r0 := libs_std.X_verifySignature(p0, p1, p2)
+			r0, r1 := libs_std.X_verifySignature(p0, p1, p2)
 
 			m.PushValue(gno.Go2GnoValue(
 				m.Alloc,
 				m.Store,
 				reflect.ValueOf(&r0).Elem(),
+			))
+			m.PushValue(gno.Go2GnoValue(
+				m.Alloc,
+				m.Store,
+				reflect.ValueOf(&r1).Elem(),
 			))
 		},
 	},

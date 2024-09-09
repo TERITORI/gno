@@ -56,7 +56,7 @@ func DecodeBech32(addr Address) (prefix string, bz [20]byte, ok bool) {
 	return decodeBech32(string(addr))
 }
 
-func VerifySignature(pubKeySigner string,msg string, signature string) bool {
+func VerifySignature(pubKeySigner string, signature string, msg string) (bool,string) {
 	return verifySignature(pubKeySigner, msg, signature)
 }
 
@@ -69,4 +69,4 @@ func getRealm(height int) (address string, pkgPath string)
 func derivePkgAddr(pkgPath string) string
 func encodeBech32(prefix string, bz [20]byte) string
 func decodeBech32(addr string) (prefix string, bz [20]byte, ok bool)
-func verifySignature(pubKeySigner string,msg string, signature string) bool
+func verifySignature(pubKeySigner string,msg string, signature string) (bool,string)

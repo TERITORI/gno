@@ -1,6 +1,8 @@
 package std
 
 import (
+	"encoding/hex"
+
 	gno "github.com/gnolang/gno/gnovm/pkg/gnolang"
 	"github.com/gnolang/gno/tm2/pkg/bech32"
 	"github.com/gnolang/gno/tm2/pkg/crypto"
@@ -150,12 +152,20 @@ func X_encodeBech32(prefix string, bytes [20]byte) string {
 	return b32
 }
 
-func X_verifySignature(pubKeySigner string, msg string, signature string) bool {
+func X_verifySignature(pubKeySigner string, msg string, signature string) (bool, string) {
 	key, err := crypto.PubKeyFromBech32(pubKeySigner)
 	if err != nil {
 		panic(err) // should not happen
 	}
-	return key.VerifyBytes([]byte(msg), []byte(signature))
+
+	decodedData, err := hex.DecodeString(signature)
+	if err != nil {
+		panic(err) // should not happen
+	}
+
+	validSignature := key.VerifyBytes([]byte(msg), decodedData)
+
+	return validSignature, key.Address().String()
 }
 
 func X_decodeBech32(addr string) (prefix string, bytes [20]byte, ok bool) {
