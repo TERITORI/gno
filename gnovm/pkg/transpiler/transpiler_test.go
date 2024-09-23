@@ -420,7 +420,7 @@ func testfunc() {
 			if filename == "" {
 				filename = "foo.gno"
 			}
-			res, err := Transpile(source, c.tags, filename)
+			res, err := Transpile(source, c.tags, filename, nil)
 
 			if c.expectedError != "" {
 				require.EqualError(t, err, c.expectedError)
