@@ -2202,6 +2202,9 @@ func Preprocess(store Store, ctx BlockNode, n Node) Node {
 				sts := make([]Type, numNames) // static types
 				tvs := make([]TypedValue, numNames)
 
+				fmt.Printf("%v\n", n.NameExprs)
+				fmt.Printf("%v\n", n.Values)
+				fmt.Printf("%v\n", numNames)
 				if numNames > 1 && len(n.Values) == 1 {
 					// Special cases if one of the following:
 					// - `var a, b, c T = f()`
@@ -2256,6 +2259,7 @@ func Preprocess(store Store, ctx BlockNode, n Node) Node {
 				} else if len(n.Values) != 0 && numNames != len(n.Values) {
 					panic(fmt.Sprintf("assignment mismatch: %d variable(s) but %d value(s)", numNames, len(n.Values)))
 				} else { // general case
+
 					for _, v := range n.Values {
 						if cx, ok := v.(*CallExpr); ok {
 							tt, ok := evalStaticTypeOfRaw(store, last, cx).(*tupleType)
@@ -2312,28 +2316,21 @@ func Preprocess(store Store, ctx BlockNode, n Node) Node {
 					}
 				}
 				// define.
+				var node BlockNode = last
 				if fn, ok := last.(*FileNode); ok {
-					pn := fn.GetParentNode(nil).(*PackageNode)
-					for i := 0; i < numNames; i++ {
-						nx := &n.NameExprs[i]
-						if nx.Name == blankIdentifier {
-							nx.Path = NewValuePathBlock(0, 0, blankIdentifier)
-						} else {
-							pn.Define2(n.Const, nx.Name, sts[i], tvs[i])
-							nx.Path = last.GetPathForName(nil, nx.Name)
-						}
-					}
-				} else {
-					for i := 0; i < numNames; i++ {
-						nx := &n.NameExprs[i]
-						if nx.Name == blankIdentifier {
-							nx.Path = NewValuePathBlock(0, 0, blankIdentifier)
-						} else {
-							last.Define2(n.Const, nx.Name, sts[i], tvs[i])
-							nx.Path = last.GetPathForName(nil, nx.Name)
-						}
+					node = fn.GetParentNode(nil).(*PackageNode)
+				}
+
+				for i := 0; i < numNames; i++ {
+					nx := &n.NameExprs[i]
+					if nx.Name == blankIdentifier {
+						nx.Path = NewValuePathBlock(0, 0, blankIdentifier)
+					} else {
+						node.Define2(n.Const, nx.Name, sts[i], tvs[i])
+						nx.Path = last.GetPathForName(nil, nx.Name)
 					}
 				}
+
 				// TODO make note of constance in static block for
 				// future use, or consider "const paths".  set as
 				// preprocessed.
