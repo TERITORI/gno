@@ -113,7 +113,30 @@ func (i *Instance) HandleMessage(msg string, postHandler PostMessageHandler) (st
 	switch funcType {
 	case message.FuncTypeRequest:
 		return i.GetFeedDefinitions(caller)
+	case message.FuncTypeRelay:
+		publicKey, signature, relayedMsg := message.ParseRelayedMessage(msg)
+		i.assertSignatureIsValid(publicKey, signature, relayedMsg)
+		
+		funcType, relayedMsg := message.ParseFunc(relayedMsg)
+		
+		id, relayedMsg := message.ParseID(relayedMsg)
+		if err := assertValidID(id); err != nil {
+			return "", err
+		}
 
+		feedWithWhitelist, err := i.getFeedWithWhitelist(id)
+		if err != nil {
+			return "", err
+		}
+
+
+		if err := feedWithWhitelist.Ingest(funcType, relayedMsg, caller); err != nil {
+			return "", err
+		}
+
+		if postHandler != nil {
+			postHandler.Handle(i, funcType, feedWithWhitelist)
+		}
 	default:
 		id, msg := message.ParseID(msg)
 		if err := assertValidID(id); err != nil {
@@ -236,4 +259,16 @@ func (i *Instance) GetFeedDefinitions(forAddress string) (string, error) {
 
 	buf.WriteString("]")
 	return buf.String(), nil
+}
+
+func (i *Instance) assertSignatureIsValid(publicKey, signature, msg string,) {
+	validSignature, signer := std.VerifySignature(publicKey, signature, msg)
+	if !validSignature {
+		panic("invalid signature")
+	}
+
+	// For the moment just accept general whitelisted addressed not feed specific ones
+	if !addressIsWhitelisted(&i.whitelist, nil, signer, nil) {
+		panic("address is not whitelisted")
+	}
 }

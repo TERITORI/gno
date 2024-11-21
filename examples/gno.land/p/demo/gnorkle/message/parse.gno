@@ -23,3 +23,13 @@ func parseFirstToken(rawMsg string) (string, string) {
 
 	return msgParts[0], msgParts[1]
 }
+
+// ParseRelayedMessage parses a relayed message and returns:
+// the signing public key
+// the signature (commonly hexadecimal)
+// The relayed message (Containing the messageFunction != Relay)
+func ParseRelayedMessage(rawMsg string) ( string, string, string) {
+	publicKey, remainder := parseFirstToken(rawMsg)
+	signature, remainder := parseFirstToken(remainder)
+	return publicKey, signature, remainder
+}
