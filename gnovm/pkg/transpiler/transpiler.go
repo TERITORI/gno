@@ -10,9 +10,11 @@ import (
 	"go/parser"
 	goscanner "go/scanner"
 	"go/token"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -75,7 +77,7 @@ func TranspiledFilenameAndTags(gnoFilePath string) (targetFilename, tags string)
 // Transpile performs transpilation on the given source code. tags can be used
 // to specify build tags; and filename helps generate useful error messages and
 // discriminate between test and normal source files.
-func Transpile(source, tags, filename string) (*Result, error) {
+func Transpile(source, tags, filename string, extraDirs []string) (*Result, error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, filename, source,
 		// SkipObjectResolution -- unused here.
@@ -87,7 +89,8 @@ func Transpile(source, tags, filename string) (*Result, error) {
 
 	isTestFile := strings.HasSuffix(filename, "_test.gno") || strings.HasSuffix(filename, "_filetest.gno")
 	ctx := &transpileCtx{
-		rootDir: gnoenv.RootDir(),
+		rootDir:   gnoenv.RootDir(),
+		extraDirs: extraDirs,
 	}
 	stdlibPrefix := filepath.Join(ctx.rootDir, "gnovm", "stdlibs")
 	if isTestFile {
@@ -142,6 +145,9 @@ type transpileCtx struct {
 	// If rootDir is given, we will check that the directory of the import path
 	// exists (using rootDir/packageDirLocation()).
 	rootDir string
+	// If extraDirs is given, we will check that the directory of the import path
+	// exists (using rootDir/packageDirLocation()).
+	extraDirs []string
 	// This should be set if we're working with a file from a standard library.
 	// This allows us to easily check if a function has a native binding, and as
 	// such modify its call expressions appropriately.
@@ -165,7 +171,41 @@ func (ctx *transpileCtx) transformFile(fset *token.FileSet, f *ast.File) (*ast.F
 				continue
 			}
 
-			if ctx.rootDir != "" {
+			foundInExtra := false
+			for _, extraDir := range ctx.extraDirs {
+				// TODO: find packages once
+				modFiles := []string{}
+				if err := filepath.Walk(extraDir, func(path string, info fs.FileInfo, err error) error {
+					if !strings.HasSuffix(path, "/gno.mod") {
+						return nil
+					}
+					modFiles = append(modFiles, path)
+					return nil
+				}); err != nil {
+					return nil, err
+				}
+				packageNames := []string{}
+				for _, modFile := range modFiles {
+					modData, err := os.ReadFile(modFile)
+					if err != nil {
+						continue
+					}
+					re := regexp.MustCompile(`^module (.+)`)
+					res := re.FindSubmatch(modData)
+					if len(res) != 2 {
+						continue
+					}
+					packageNames = append(packageNames, string(res[1]))
+				}
+
+				for _, pn := range packageNames {
+					if pn == importPath {
+						foundInExtra = true
+					}
+				}
+			}
+
+			if !foundInExtra && ctx.rootDir != "" {
 				dirPath := filepath.Join(ctx.rootDir, PackageDirLocation(importPath))
 				if _, err := os.Stat(dirPath); err != nil {
 					if !os.IsNotExist(err) {
