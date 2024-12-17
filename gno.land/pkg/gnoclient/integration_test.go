@@ -5,17 +5,17 @@ import (
 
 	"github.com/gnolang/gno/gnovm/pkg/gnolang"
 
-	"github.com/gnolang/gno/tm2/pkg/sdk/bank"
-	"github.com/gnolang/gno/tm2/pkg/std"
-
 	"github.com/gnolang/gno/gno.land/pkg/gnoland/ugnot"
 	"github.com/gnolang/gno/gno.land/pkg/integration"
 	"github.com/gnolang/gno/gno.land/pkg/sdk/vm"
+	"github.com/gnolang/gno/gnovm"
 	"github.com/gnolang/gno/gnovm/pkg/gnoenv"
 	rpcclient "github.com/gnolang/gno/tm2/pkg/bft/rpc/client"
 	"github.com/gnolang/gno/tm2/pkg/crypto"
 	"github.com/gnolang/gno/tm2/pkg/crypto/keys"
 	"github.com/gnolang/gno/tm2/pkg/log"
+	"github.com/gnolang/gno/tm2/pkg/sdk/bank"
+	"github.com/gnolang/gno/tm2/pkg/std"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,8 +39,8 @@ func TestCallSingle_Integration(t *testing.T) {
 
 	// Make Tx config
 	baseCfg := BaseTxCfg{
-		GasFee:         ugnot.ValueString(10000),
-		GasWanted:      8000000,
+		GasFee:         ugnot.ValueString(2100000),
+		GasWanted:      21000000,
 		AccountNumber:  0,
 		SequenceNumber: 0,
 		Memo:           "",
@@ -92,8 +92,8 @@ func TestCallMultiple_Integration(t *testing.T) {
 
 	// Make Tx config
 	baseCfg := BaseTxCfg{
-		GasFee:         ugnot.ValueString(10000),
-		GasWanted:      8000000,
+		GasFee:         ugnot.ValueString(2100000),
+		GasWanted:      21000000,
 		AccountNumber:  0,
 		SequenceNumber: 0,
 		Memo:           "",
@@ -154,8 +154,8 @@ func TestSendSingle_Integration(t *testing.T) {
 
 	// Make Tx config
 	baseCfg := BaseTxCfg{
-		GasFee:         ugnot.ValueString(10000),
-		GasWanted:      8000000,
+		GasFee:         ugnot.ValueString(2100000),
+		GasWanted:      21000000,
 		AccountNumber:  0,
 		SequenceNumber: 0,
 		Memo:           "",
@@ -218,8 +218,8 @@ func TestSendMultiple_Integration(t *testing.T) {
 
 	// Make Tx config
 	baseCfg := BaseTxCfg{
-		GasFee:         ugnot.ValueString(10000),
-		GasWanted:      8000000,
+		GasFee:         ugnot.ValueString(2100000),
+		GasWanted:      21000000,
 		AccountNumber:  0,
 		SequenceNumber: 0,
 		Memo:           "",
@@ -290,8 +290,8 @@ func TestRunSingle_Integration(t *testing.T) {
 
 	// Make Tx config
 	baseCfg := BaseTxCfg{
-		GasFee:         ugnot.ValueString(10000),
-		GasWanted:      8000000,
+		GasFee:         ugnot.ValueString(2100000),
+		GasWanted:      21000000,
 		AccountNumber:  0,
 		SequenceNumber: 0,
 		Memo:           "",
@@ -316,9 +316,9 @@ func main() {
 	// Make Msg configs
 	msg := vm.MsgRun{
 		Caller: caller.GetAddress(),
-		Package: &std.MemPackage{
+		Package: &gnovm.MemPackage{
 			Name: "main",
-			Files: []*std.MemFile{
+			Files: []*gnovm.MemFile{
 				{
 					Name: "main.gno",
 					Body: fileBody,
@@ -358,8 +358,8 @@ func TestRunMultiple_Integration(t *testing.T) {
 
 	// Make Tx config
 	baseCfg := BaseTxCfg{
-		GasFee:         ugnot.ValueString(10000),
-		GasWanted:      8000000,
+		GasFee:         ugnot.ValueString(2300000),
+		GasWanted:      23000000,
 		AccountNumber:  0,
 		SequenceNumber: 0,
 		Memo:           "",
@@ -393,9 +393,9 @@ func main() {
 	// Make Msg configs
 	msg1 := vm.MsgRun{
 		Caller: caller.GetAddress(),
-		Package: &std.MemPackage{
+		Package: &gnovm.MemPackage{
 			Name: "main",
-			Files: []*std.MemFile{
+			Files: []*gnovm.MemFile{
 				{
 					Name: "main.gno",
 					Body: fileBody1,
@@ -406,9 +406,9 @@ func main() {
 	}
 	msg2 := vm.MsgRun{
 		Caller: caller.GetAddress(),
-		Package: &std.MemPackage{
+		Package: &gnovm.MemPackage{
 			Name: "main",
-			Files: []*std.MemFile{
+			Files: []*gnovm.MemFile{
 				{
 					Name: "main.gno",
 					Body: fileBody2,
@@ -451,8 +451,8 @@ func TestAddPackageSingle_Integration(t *testing.T) {
 
 	// Make Tx config
 	baseCfg := BaseTxCfg{
-		GasFee:         ugnot.ValueString(10000),
-		GasWanted:      8000000,
+		GasFee:         ugnot.ValueString(2100000),
+		GasWanted:      21000000,
 		AccountNumber:  0,
 		SequenceNumber: 0,
 		Memo:           "",
@@ -474,10 +474,10 @@ func Echo(str string) string {
 	// Make Msg config
 	msg := vm.MsgAddPackage{
 		Creator: caller.GetAddress(),
-		Package: &std.MemPackage{
+		Package: &gnovm.MemPackage{
 			Name: "echo",
 			Path: deploymentPath,
-			Files: []*std.MemFile{
+			Files: []*gnovm.MemFile{
 				{
 					Name: fileName,
 					Body: body,
@@ -536,8 +536,8 @@ func TestAddPackageMultiple_Integration(t *testing.T) {
 
 	// Make Tx config
 	baseCfg := BaseTxCfg{
-		GasFee:         ugnot.ValueString(10000),
-		GasWanted:      8000000,
+		GasFee:         ugnot.ValueString(2100000),
+		GasWanted:      21000000,
 		AccountNumber:  0,
 		SequenceNumber: 0,
 		Memo:           "",
@@ -556,7 +556,7 @@ func Echo(str string) string {
 	body2 := `package hello
 
 func Hello(str string) string {
-	return "Hello " + str + "!" 
+	return "Hello " + str + "!"
 }`
 
 	caller, err := client.Signer.Info()
@@ -564,10 +564,10 @@ func Hello(str string) string {
 
 	msg1 := vm.MsgAddPackage{
 		Creator: caller.GetAddress(),
-		Package: &std.MemPackage{
+		Package: &gnovm.MemPackage{
 			Name: "echo",
 			Path: deploymentPath1,
-			Files: []*std.MemFile{
+			Files: []*gnovm.MemFile{
 				{
 					Name: "echo.gno",
 					Body: body1,
@@ -579,10 +579,10 @@ func Hello(str string) string {
 
 	msg2 := vm.MsgAddPackage{
 		Creator: caller.GetAddress(),
-		Package: &std.MemPackage{
+		Package: &gnovm.MemPackage{
 			Name: "hello",
 			Path: deploymentPath2,
-			Files: []*std.MemFile{
+			Files: []*gnovm.MemFile{
 				{
 					Name: "gno.mod",
 					Body: "module gno.land/p/demo/integration/test/hello",
